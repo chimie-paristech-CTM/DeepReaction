@@ -1,0 +1,25 @@
+[project]
+name = "numpy pandas scikit-learn torch torchvision pytorch-lightning jupyterlab ipykernel torch-geometric tensorflow sympy wandb
+
+The Poetry configuration is invalid:
+  - project.name must match pattern ^([a-zA-Z\d]|[a-zA-Z\d][\w.-]*[a-zA-Z\d])$
+
+(pyg) root@3bfb1b249273:~/reaction# poetry lock
+
+The Poetry configuration is invalid:
+  - project.name must match pattern ^([a-zA-Z\d]|[a-zA-Z\d][\w.-]*[a-zA-Z\d])$"
+version = "0.1.0"
+description = "reaction"
+authors = [
+    {name = ""}
+]
+license = {text = "MIT"}
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+]
+
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"

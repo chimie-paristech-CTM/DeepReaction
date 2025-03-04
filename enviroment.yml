@@ -1,0 +1,22 @@
+name: reaction
+channels:
+  - pytorch
+  - conda-forge
+dependencies:
+  - python=3.10
+  - numpy
+  - pandas
+  - scikit-learn
+  - matplotlib
+  - sympy
+  - ipykernel
+  - jupyterlab
+  - pytorch=2.5.0
+  - cudatoolkit=12.4        
+  - pytorch-lightning
+  - pytorch-geometric      
+  - tensorboard
+  - tensorflow=2.8        
+  - wandb
+  - pip
+ 
