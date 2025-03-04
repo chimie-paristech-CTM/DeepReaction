@@ -1,5 +1,5 @@
 """
-MLP modules for molecular property prediction models.
+MLP modules for prediction models.
 
 This module contains MLP architectures used for prediction
 after readout operations.

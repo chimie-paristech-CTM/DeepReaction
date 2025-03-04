@@ -1,7 +1,3 @@
-# Copied from PyTorch Geometric source files. We needed to change what the
-# forward function of the DimeNet class returns to allow other types of
-# readouts
-
 import os
 import os.path as osp
 from math import pi as PI
@@ -20,6 +16,7 @@ from torch_geometric.nn import radius_graph
 from torch_geometric.nn.inits import glorot_orthogonal
 from torch_geometric.nn.resolver import activation_resolver
 
+# Mapping for QM9 target properties
 qm9_target_dict = {
     0: 'mu',
     1: 'alpha',
@@ -36,6 +33,9 @@ qm9_target_dict = {
 
 
 class Envelope(torch.nn.Module):
+    """
+    Envelope function module that applies a polynomial envelope to the input.
+    """
     def __init__(self, exponent):
         super().__init__()
         self.p = exponent + 1
@@ -53,13 +53,14 @@ class Envelope(torch.nn.Module):
 
 
 class BesselBasisLayer(torch.nn.Module):
+    """
+    Layer for computing Bessel basis functions with an envelope.
+    """
     def __init__(self, num_radial, cutoff=5.0, envelope_exponent=5):
         super().__init__()
         self.cutoff = cutoff
         self.envelope = Envelope(envelope_exponent)
-
         self.freq = torch.nn.Parameter(torch.Tensor(num_radial))
-
         self.reset_parameters()
 
     def reset_parameters(self):
@@ -73,6 +74,9 @@ class BesselBasisLayer(torch.nn.Module):
 
 
 class SphericalBasisLayer(torch.nn.Module):
+    """
+    Layer for computing spherical (angular) basis functions.
+    """
     def __init__(self, num_spherical, num_radial, cutoff=5.0,
                  envelope_exponent=5):
         super().__init__()
@@ -120,14 +124,15 @@ class SphericalBasisLayer(torch.nn.Module):
 
 
 class EmbeddingBlock(torch.nn.Module):
+    """
+    Embedding block that combines atom embeddings with transformed radial basis functions.
+    """
     def __init__(self, num_radial, hidden_channels, act):
         super().__init__()
         self.act = act
-
         self.emb = Embedding(95, hidden_channels)
         self.lin_rbf = Linear(num_radial, hidden_channels)
         self.lin = Linear(3 * hidden_channels, hidden_channels)
-
         self.reset_parameters()
 
     def reset_parameters(self):
@@ -142,12 +147,14 @@ class EmbeddingBlock(torch.nn.Module):
 
 
 class ResidualLayer(torch.nn.Module):
+    """
+    Residual layer that applies two linear transformations with skip connection.
+    """
     def __init__(self, hidden_channels, act):
         super().__init__()
         self.act = act
         self.lin1 = Linear(hidden_channels, hidden_channels)
         self.lin2 = Linear(hidden_channels, hidden_channels)
-
         self.reset_parameters()
 
     def reset_parameters(self):
@@ -161,11 +168,13 @@ class ResidualLayer(torch.nn.Module):
 
 
 class InteractionBlock(torch.nn.Module):
+    """
+    Interaction block that computes messages between atoms and updates features.
+    """
     def __init__(self, hidden_channels, num_bilinear, num_spherical,
                  num_radial, num_before_skip, num_after_skip, act):
         super().__init__()
         self.act = act
-
         self.lin_rbf = Linear(num_radial, hidden_channels, bias=False)
         self.lin_sbf = Linear(num_spherical * num_radial, num_bilinear,
                               bias=False)
@@ -223,17 +232,18 @@ class InteractionBlock(torch.nn.Module):
 
 
 class OutputBlock(torch.nn.Module):
+    """
+    Output block that aggregates atom features to produce final predictions.
+    """
     def __init__(self, num_radial, hidden_channels, out_channels, num_layers,
                  act):
         super().__init__()
         self.act = act
-
         self.lin_rbf = Linear(num_radial, hidden_channels, bias=False)
         self.lins = torch.nn.ModuleList()
         for _ in range(num_layers):
             self.lins.append(Linear(hidden_channels, hidden_channels))
         self.lin = Linear(hidden_channels, out_channels, bias=False)
-
         self.reset_parameters()
 
     def reset_parameters(self):
@@ -252,11 +262,9 @@ class OutputBlock(torch.nn.Module):
 
 
 class DimeNet(torch.nn.Module):
-    r"""The directional message passing neural network (DimeNet) from the
-    `"Directional Message Passing for Molecular Graphs"
-    <https://arxiv.org/abs/2003.03123>`_ paper.
-    DimeNet transforms messages based on the angle between them in a
-    rotation-equivariant fashion.
+    r"""Directional Message Passing Neural Network (DimeNet) from the
+    "Directional Message Passing for Molecular Graphs" paper.
+    DimeNet transforms messages based on the angle between them in a rotation-equivariant manner.
     """
 
     url = ('https://github.com/klicperajo/dimenet/raw/master/pretrained/'
@@ -282,7 +290,6 @@ class DimeNet(torch.nn.Module):
         self.rbf = BesselBasisLayer(num_radial, cutoff, envelope_exponent)
         self.sbf = SphericalBasisLayer(num_spherical, num_radial, cutoff,
                                        envelope_exponent)
-
         self.emb = EmbeddingBlock(num_radial, hidden_channels, act)
 
         self.output_blocks = torch.nn.ModuleList([
@@ -307,7 +314,8 @@ class DimeNet(torch.nn.Module):
             interaction.reset_parameters()
 
     def triplets(self, edge_index, num_nodes):
-        row, col = edge_index  # j->i
+        # edge_index: tuple (row, col) representing edges from j -> i
+        row, col = edge_index
 
         value = torch.arange(row.size(0), device=row.device)
         adj_t = SparseTensor(row=col, col=row, value=value,
@@ -315,14 +323,14 @@ class DimeNet(torch.nn.Module):
         adj_t_row = adj_t[row]
         num_triplets = adj_t_row.set_value(None).sum(dim=1).to(torch.long)
 
-        # Node indices (k->j->i) for triplets.
+        # Compute node indices for triplets (k -> j -> i)
         idx_i = col.repeat_interleave(num_triplets)
         idx_j = row.repeat_interleave(num_triplets)
         idx_k = adj_t_row.storage.col()
-        mask = idx_i != idx_k  # Remove i == k triplets.
+        mask = idx_i != idx_k  # Remove triplets where i == k
         idx_i, idx_j, idx_k = idx_i[mask], idx_j[mask], idx_k[mask]
 
-        # Edge indices (k-j, j->i) for triplets.
+        # Compute edge indices for triplets (k-j, j->i)
         idx_kj = adj_t_row.storage.value()[mask]
         idx_ji = adj_t_row.storage.row()[mask]
 
@@ -335,10 +343,10 @@ class DimeNet(torch.nn.Module):
         i, j, idx_i, idx_j, idx_k, idx_kj, idx_ji = self.triplets(
             edge_index, num_nodes=z.size(0))
 
-        # Calculate distances.
+        # Calculate distances between nodes.
         dist = (pos[i] - pos[j]).pow(2).sum(dim=-1).sqrt()
 
-        # Calculate angles.
+        # Calculate angles between edge vectors.
         pos_i = pos[idx_i]
         pos_ji, pos_ki = pos[idx_j] - pos_i, pos[idx_k] - pos_i
         a = (pos_ji * pos_ki).sum(dim=-1)
@@ -348,11 +356,11 @@ class DimeNet(torch.nn.Module):
         rbf = self.rbf(dist)
         sbf = self.sbf(dist, angle, idx_kj)
 
-        # Embedding block.
+        # Apply embedding block.
         x = self.emb(z, rbf, i, j)
         P = self.output_blocks[0](x, rbf, i, num_nodes=pos.size(0))
 
-        # Interaction blocks.
+        # Apply interaction blocks and accumulate outputs.
         for interaction_block, output_block in zip(self.interaction_blocks,
                                                    self.output_blocks[1:]):
             x = interaction_block(x, rbf, sbf, idx_kj, idx_ji)
@@ -361,7 +369,7 @@ class DimeNet(torch.nn.Module):
         return x, P
 
     def forward(self, z, pos0, pos1, pos2, batch=None):
-        # 对三个不同的pos分别计算预测结果，再取平均
+        # Compute predictions for three different positions and average them.
         _, P0 = self._forward_single(z, pos0, batch)
         _, P1 = self._forward_single(z, pos1, batch)
         _, P2 = self._forward_single(z, pos2, batch)

@@ -1,5 +1,5 @@
 """
-Activation functions for molecular property prediction models.
+Activation functions for molecular prediction models.
 """
 
 import torch

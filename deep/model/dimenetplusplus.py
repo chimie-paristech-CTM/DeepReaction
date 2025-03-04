@@ -1,6 +1,4 @@
 """
-DimeNetPlusPlus.py
-
 "Fast and Uncertainty-Aware Directional Message Passing for Non-Equilibrium Molecules"
 """
 
@@ -25,7 +23,7 @@ from torch_geometric.nn.resolver import activation_resolver
 import sympy as sym
 import tensorflow as tf
 
-# QM9 目标属性映射（如需使用预训练权重时用到）
+# QM9 target property mapping (used when loading pretrained weights)
 qm9_target_dict = {
     0: 'mu',
     1: 'alpha',
@@ -40,15 +38,14 @@ qm9_target_dict = {
     11: 'Cv',
 }
 
-
 # -------------------------------
-# 数学工具函数
+# Mathematical Utility Functions
 # -------------------------------
 def bessel_basis(num_spherical, num_radial):
     """
-    构造 Bessel 基函数的符号表达式列表。
-    返回一个二维列表，形状为 [num_spherical][num_radial]。
-    这里采用 sin(j*pi*x)/(j*pi*x) 作为示例基函数。
+    Construct a list of symbolic expressions for Bessel basis functions.
+    Returns a two-dimensional list with shape [num_spherical][num_radial].
+    Here, sin(j*pi*x)/(j*pi*x) is used as an example basis function.
     """
     x = sym.symbols('x')
     bessel_forms = []
@@ -63,15 +60,15 @@ def bessel_basis(num_spherical, num_radial):
 
 def real_sph_harm(num_spherical):
     """
-    构造实值球谐函数的符号表达式列表。
-    返回一个列表，每个元素为一个包含球谐函数表达式的元组。
-    对于 l=0 返回常数，对于 l>0 这里采用 sin(l*theta) 作为示例。
+    Construct a list of symbolic expressions for real spherical harmonics.
+    Returns a list where each element is a tuple containing the spherical harmonic expression.
+    For l=0, returns a constant; for l>0, sin(l*theta) is used as an example.
     """
     theta = sym.symbols('theta')
     sph_harm = []
     for l in range(num_spherical):
         if l == 0:
-            expr = 1  # 常数函数
+            expr = 1  # Constant function
         else:
             expr = sym.sin(l * theta)
         sph_harm.append((expr,))
@@ -79,9 +76,12 @@ def real_sph_harm(num_spherical):
 
 
 # -------------------------------
-# 模型辅助模块
+# Model Helper Modules
 # -------------------------------
 class Envelope(nn.Module):
+    """
+    Envelope function module that applies a polynomial envelope to distances.
+    """
     def __init__(self, exponent):
         super().__init__()
         self.p = exponent + 1
@@ -94,10 +94,14 @@ class Envelope(nn.Module):
         x_pow_p0 = x.pow(p - 1)
         x_pow_p1 = x_pow_p0 * x
         x_pow_p2 = x_pow_p1 * x
+        # Apply the envelope function only for x < 1.0
         return (1. / x + a * x_pow_p0 + b * x_pow_p1 + c * x_pow_p2) * (x < 1.0).to(x.dtype)
 
 
 class BesselBasisLayer(nn.Module):
+    """
+    Bessel basis layer that computes radial basis functions using an envelope.
+    """
     def __init__(self, num_radial, cutoff=5.0, envelope_exponent=5):
         super().__init__()
         self.cutoff = cutoff
@@ -116,6 +120,9 @@ class BesselBasisLayer(nn.Module):
 
 
 class SphericalBasisLayer(nn.Module):
+    """
+    Spherical basis layer that computes angular basis functions using spherical harmonics and Bessel functions.
+    """
     def __init__(self, num_spherical, num_radial, cutoff=5.0, envelope_exponent=5):
         super().__init__()
         self.num_spherical = num_spherical
@@ -123,6 +130,7 @@ class SphericalBasisLayer(nn.Module):
         self.cutoff = cutoff
         self.envelope = Envelope(envelope_exponent)
 
+        # Initialize symbolic expressions for Bessel basis and spherical harmonics.
         bessel_forms = bessel_basis(num_spherical, num_radial)
         sph_harm_forms = real_sph_harm(num_spherical)
 
@@ -134,6 +142,7 @@ class SphericalBasisLayer(nn.Module):
         for i in range(num_spherical):
             if i == 0:
                 sph_val = sym.lambdify([theta], sph_harm_forms[i][0], modules)(0)
+                # For l=0, use a constant function
                 self.sph_funcs.append(lambda theta_val, s=sph_val: torch.zeros_like(theta_val) + s)
             else:
                 func = sym.lambdify([theta], sph_harm_forms[i][0], modules)
@@ -144,15 +153,21 @@ class SphericalBasisLayer(nn.Module):
 
     def forward(self, dist, angle, idx_kj):
         dist = dist / self.cutoff
+        # Compute the radial basis functions (rbf) using the Bessel functions
         rbf = torch.stack([f(dist) for f in self.bessel_funcs], dim=1)
         rbf = self.envelope(dist).unsqueeze(-1) * rbf
+        # Compute the angular basis functions (cbf) using the spherical harmonic functions
         cbf = torch.stack([f(angle) for f in self.sph_funcs], dim=1)
         n, k = self.num_spherical, self.num_radial
+        # Multiply and reshape the basis function outputs
         out = (rbf[idx_kj].view(-1, n, k) * cbf.view(-1, n, 1)).view(-1, n * k)
         return out
 
 
 class EmbeddingBlock(nn.Module):
+    """
+    Embedding block that combines node embeddings and radial basis function embeddings.
+    """
     def __init__(self, num_radial, hidden_channels, act):
         super().__init__()
         self.act = act
@@ -167,12 +182,18 @@ class EmbeddingBlock(nn.Module):
         self.lin.reset_parameters()
 
     def forward(self, x, rbf, i, j):
+        # Lookup node embeddings
         x = self.emb(x)
+        # Transform radial basis functions
         rbf = self.act(self.lin_rbf(rbf))
+        # Concatenate features and transform
         return self.act(self.lin(torch.cat([x[i], x[j], rbf], dim=-1)))
 
 
 class ResidualLayer(nn.Module):
+    """
+    Residual layer with two linear transformations and a skip connection.
+    """
     def __init__(self, hidden_channels, act):
         super().__init__()
         self.act = act
@@ -191,28 +212,33 @@ class ResidualLayer(nn.Module):
 
 
 class InteractionPPBlock(nn.Module):
+    """
+    Interaction block for DimeNet++ that transforms Bessel and spherical basis representations,
+    performs message passing and feature update.
+    """
     def __init__(self, hidden_channels, int_emb_size, basis_emb_size,
                  num_spherical, num_radial, num_before_skip, num_after_skip,
                  act):
         super().__init__()
         self.act = act
-        # 对 Bessel 与球谐函数表示进行变换
+        # Transformations for the radial basis functions (rbf) and spherical basis functions (sbf)
         self.lin_rbf1 = Linear(num_radial, basis_emb_size, bias=False)
         self.lin_rbf2 = Linear(basis_emb_size, hidden_channels, bias=False)
         self.lin_sbf1 = Linear(num_spherical * num_radial, basis_emb_size, bias=False)
         self.lin_sbf2 = Linear(basis_emb_size, int_emb_size, bias=False)
-        # 对输入信息的变换
+        # Transform input messages
         self.lin_kj = Linear(hidden_channels, hidden_channels)
         self.lin_ji = Linear(hidden_channels, hidden_channels)
-        # 降维与升维
+        # Down-projection and up-projection layers
         self.lin_down = Linear(hidden_channels, int_emb_size, bias=False)
         self.lin_up = Linear(int_emb_size, hidden_channels, bias=False)
-        # 残差层
+        # Residual layers before skip connection
         self.layers_before_skip = nn.ModuleList([
             nn.Sequential(Linear(hidden_channels, hidden_channels), nn.ReLU())
             for _ in range(num_before_skip)
         ])
         self.lin = Linear(hidden_channels, hidden_channels)
+        # Residual layers after skip connection
         self.layers_after_skip = nn.ModuleList([
             nn.Sequential(Linear(hidden_channels, hidden_channels), nn.ReLU())
             for _ in range(num_after_skip)
@@ -261,6 +287,9 @@ class InteractionPPBlock(nn.Module):
 
 
 class OutputPPBlock(nn.Module):
+    """
+    Output block for DimeNet++ that aggregates features to produce final predictions.
+    """
     def __init__(self, num_radial, hidden_channels, out_emb_channels,
                  out_channels, num_layers, act):
         super().__init__()
@@ -291,11 +320,11 @@ class OutputPPBlock(nn.Module):
 
 
 # -------------------------------
-# DimeNet++ 模型实现（独立实现，不依赖外部 DimeNet）
+# DimeNet++ Model Implementation (Standalone, does not depend on external DimeNet)
 # -------------------------------
 class DimeNetPlusPlus(nn.Module):
-    r"""DimeNet++ 网络实现
-    该模型采用多视角（pos0, pos1, pos2）的输入，分别计算预测后取平均。
+    r"""DimeNet++ network implementation.
+    This model takes multi-view inputs (pos0, pos1, pos2), computes predictions for each view, and averages them.
     """
     url = ('https://raw.githubusercontent.com/gasteigerjo/dimenet/'
            'master/pretrained/dimenet_pp')
@@ -340,9 +369,18 @@ class DimeNetPlusPlus(nn.Module):
             interaction.reset_parameters()
 
     def triplets(self, edge_index, num_nodes):
-        # edge_index: (row, col) 表示边 j->i
+        """
+        Compute triplets for the interaction blocks based on edge indices.
+
+        Args:
+            edge_index (Tensor): Tuple (row, col) representing edges from j -> i.
+            num_nodes (int): Number of nodes.
+        Returns:
+            A tuple of indices used for message passing.
+        """
         row, col = edge_index
         value = torch.arange(row.size(0), device=row.device)
+        # Create a sparse tensor representing the transposed adjacency matrix
         adj_t = SparseTensor(row=col, col=row, value=value,
                              sparse_sizes=(num_nodes, num_nodes))
         adj_t_row = adj_t[row]
@@ -357,7 +395,7 @@ class DimeNetPlusPlus(nn.Module):
         return col, row, idx_i, idx_j, idx_k, idx_kj, idx_ji
 
     def _forward_single(self, z, pos, batch=None):
-        # 利用 radius_graph 构造边
+        # Construct edges using radius_graph
         edge_index = radius_graph(pos, r=self.cutoff, batch=batch,
                                   max_num_neighbors=self.max_num_neighbors)
         i, j, idx_i, idx_j, idx_k, idx_kj, idx_ji = self.triplets(edge_index, num_nodes=z.size(0))
@@ -365,6 +403,7 @@ class DimeNetPlusPlus(nn.Module):
         pos_i = pos[idx_i]
         pos_ji = pos[idx_j] - pos_i
         pos_ki = pos[idx_k] - pos_i
+        # Compute the cosine and sine components for the angle
         a = (pos_ji * pos_ki).sum(dim=-1)
         b = torch.cross(pos_ji, pos_ki).norm(dim=-1)
         angle = torch.atan2(b, a)
@@ -378,7 +417,7 @@ class DimeNetPlusPlus(nn.Module):
         return x, P
 
     def forward(self, z, pos0, pos1, pos2, batch=None):
-        # 分别对三个不同视角计算预测，再取平均
+        # Compute predictions for three different views separately and then average the results
         _, P0 = self._forward_single(z, pos0, batch)
         _, P1 = self._forward_single(z, pos1, batch)
         _, P2 = self._forward_single(z, pos2, batch)
@@ -387,6 +426,16 @@ class DimeNetPlusPlus(nn.Module):
 
     @classmethod
     def from_qm9_pretrained(cls, root: str, dataset: Dataset, target: int):
+        """
+        Load a pretrained model for the QM9 dataset.
+
+        Args:
+            root (str): Root directory for storing pretrained weights.
+            dataset (Dataset): Dataset object.
+            target (int): Target property index.
+        Returns:
+            A tuple containing the model and dataset splits (train, validation, test).
+        """
         os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
         if target not in qm9_target_dict or target == 4:
             raise ValueError("Invalid target for QM9")
@@ -421,6 +470,7 @@ class DimeNetPlusPlus(nn.Module):
         )
 
         def copy_(src, name):
+            # Helper function to copy pretrained weights from checkpoint
             init = reader.get_tensor(f'{name}/.ATTRIBUTES/VARIABLE_VALUE')
             init = torch.from_numpy(init)
             if name.endswith('kernel'):
@@ -457,5 +507,3 @@ class DimeNetPlusPlus(nn.Module):
         val_idx = perm[110000:120000]
         test_idx = perm[120000:]
         return model, (dataset[train_idx], dataset[val_idx], dataset[test_idx])
-
-

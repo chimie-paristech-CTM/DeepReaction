@@ -206,7 +206,7 @@ To evaluate a trained model:
 
 
 ```
-[Placeholder for your citation information]
+[Placeholder]
 ```
 
 ## Acknowledgements
