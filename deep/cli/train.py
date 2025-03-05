@@ -319,6 +319,20 @@ def load_datasets(args, logger) -> Tuple[DataLoader, DataLoader, DataLoader, Any
     else:
         raise ValueError(f"Unsupported dataset: {args.dataset}")
 
+    # Log scaler information for debugging purposes
+    if args.use_scaler and scaler is not None:
+        logger.info(f"Dataset loaded with scaler: {type(scaler).__name__}")
+        if hasattr(scaler, 'mean_'):
+            logger.info(f"Scaler mean: {scaler.mean_}")
+        if hasattr(scaler, 'scale_'):
+            logger.info(f"Scaler scale: {scaler.scale_}")
+        if hasattr(scaler, 'var_'):
+            logger.info(f"Scaler variance: {scaler.var_}")
+    elif args.use_scaler:
+        logger.warning("use_scaler is True but no scaler was returned from dataset loader")
+    else:
+        logger.info("No scaler being used (use_scaler=False)")
+
     # Configure data loader parameters
     dataloader_kwargs = {
         'batch_size': args.batch_size,
@@ -437,6 +451,14 @@ def setup_cross_validation_dataloaders(args, logger) -> List[Tuple[DataLoader, D
     else:
         raise ValueError(f"Cross-validation not supported for dataset: {args.dataset}")
 
+    # Log scaler information
+    if args.use_scaler and scaler is not None:
+        logger.info(f"CV dataset loaded with scaler: {type(scaler).__name__}")
+        if hasattr(scaler, 'mean_'):
+            logger.info(f"Scaler mean: {scaler.mean_}")
+        if hasattr(scaler, 'scale_'):
+            logger.info(f"Scaler scale: {scaler.scale_}")
+
     # List to store dataloaders for each fold
     cv_dataloaders = []
 
@@ -488,16 +510,29 @@ def create_model(args, scaler) -> pl.LightningModule:
     Returns:
         pl.LightningModule: Model instance
     """
-    # print(f"args.use_scaler:{args.use_scaler}:::::scaler:{scaler}\n\n\n")
-    # Define model configuration
-    scaler = scaler if args.use_scaler else None
+    # Ensure we're using the same scaler across training and inference
+    scaler_to_use = scaler if args.use_scaler else None
 
+    # Log scaler information for debugging purposes
+    logger = logging.getLogger('deep')
+    if scaler_to_use is not None:
+        logger.info(f"Creating model with scaler: {type(scaler_to_use).__name__}")
+        if hasattr(scaler_to_use, 'mean_'):
+            logger.info(f"Scaler mean: {scaler_to_use.mean_}")
+        if hasattr(scaler_to_use, 'scale_'):
+            logger.info(f"Scaler scale: {scaler_to_use.scale_}")
+        if hasattr(scaler_to_use, 'var_'):
+            logger.info(f"Scaler variance: {scaler_to_use.var_}")
+    else:
+        logger.info("Creating model without scaler")
+
+    # Define model configuration
     model_config = {
         'readout': args.readout,
         'batch_size': args.batch_size,
         'lr': args.lr,
         'max_num_atoms_in_mol': args.max_num_atoms,
-        'scaler': scaler,
+        'scaler': scaler_to_use,  # Pass the scaler to the model
         'use_layer_norm': args.use_layer_norm,
         'node_latent_dim': args.node_latent_dim,
         'edge_latent_dim': args.edge_latent_dim,
@@ -561,6 +596,15 @@ def train_model(
     """
     logger.info("Initializing training")
 
+    # Verify model scaler status before training
+    if hasattr(model, 'scaler') and model.scaler is not None:
+        logger.info(f"Model has scaler of type: {type(model.scaler).__name__}")
+        if hasattr(model.scaler, 'mean_'):
+            logger.info(f"Model scaler mean: {model.scaler.mean_}")
+            logger.info(f"Model scaler scale: {model.scaler.scale_}")
+    else:
+        logger.info("Model does not have a scaler attached")
+
     # Set up distributed training configuration
     distributed_config = setup_distributed_training(args)
 
@@ -605,6 +649,13 @@ def train_model(
     logger.info(f"Training completed in {training_time:.2f} seconds")
     logger.info(f"Best epoch: {metrics['best_epoch']}")
 
+    # Verify model scaler status after training
+    if hasattr(model, 'scaler') and model.scaler is not None:
+        logger.info(f"After training, model has scaler of type: {type(model.scaler).__name__}")
+        if hasattr(model.scaler, 'mean_'):
+            logger.info(f"Final model scaler mean: {model.scaler.mean_}")
+            logger.info(f"Final model scaler scale: {model.scaler.scale_}")
+
     return trainer, metrics
 
 
@@ -632,88 +683,39 @@ def evaluate_model(
     """
     logger.info("Evaluating model on test set")
 
+    # Verify model scaler status before evaluation
+    if hasattr(model, 'scaler') and model.scaler is not None:
+        logger.info(f"Model has scaler of type for evaluation: {type(model.scaler).__name__}")
+        if hasattr(model.scaler, 'mean_'):
+            logger.info(f"Evaluation model scaler mean: {model.scaler.mean_}")
+            logger.info(f"Evaluation model scaler scale: {model.scaler.scale_}")
+    else:
+        logger.info("Model does not have a scaler for evaluation")
+
     # Test model
     test_results = trainer.test(model, dataloaders=test_loader)
-    import numpy as np
-    import pandas as pd
-    from sklearn.metrics import mean_absolute_error, mean_squared_error
-    import os
-    from collections import defaultdict
-    import os
-    import numpy as np
-    import pandas as pd
-    from collections import defaultdict
-    from sklearn.metrics import mean_absolute_error, mean_squared_error
 
-    # 预测和真实值
+    # Get predictions and ground truth
     y_pred = model.test_output
     y_true = model.test_true
 
-    # # 从 defaultdict 中提取数组
-    # if isinstance(y_true, defaultdict):
-    #     # 假设 defaultdict 中只有一个键，或者我们只关心第一个值
-    #     y_true = list(y_true.values())[0]
-
-    # if isinstance(y_pred, defaultdict):
-    #     y_pred = list(y_pred.values())[0]
-
-    # # 确保转换为 NumPy 数组
-    # y_true = np.asarray(y_true)
-    # y_pred = np.asarray(y_pred)
-
-    # # 确保数据类型一致（通常使用 float32 或 float64）
-    # y_true = y_true.astype(np.float64)
-    # y_pred = y_pred.astype(np.float64)
-
-    # # 计算评估指标
-    # mae = mean_absolute_error(y_true, y_pred)
-    # mse = mean_squared_error(y_true, y_pred)
-    # rmse = np.sqrt(mse)
-
-    # # 打印详细的评估信息
-    # print("\n--- 测试集评估指标 ---")
-    # print(f"Mean Absolute Error (MAE): {mae:.4f}")
-    # print(f"Mean Squared Error (MSE):  {mse:.4f}")
-    # print(f"Root Mean Squared Error (RMSE): {rmse:.4f}")
-
-    # 保存数据
+    # Save data
     if save_predictions:
-        # 转换为 pandas DataFrame
+        # Convert to pandas DataFrame and save CSV
+        import pandas as pd
         y_pred_df = pd.DataFrame(y_pred)
         y_true_df = pd.DataFrame(y_true)
 
-        # 保存为 CSV 文件（双重保险）
+        # Create directory if it doesn't exist
+        os.makedirs(output_dir, exist_ok=True)
+
+        # Save as CSV files
         y_pred_df.to_csv(os.path.join(output_dir, 'test_y_pred.csv'), index=False, header=False)
         y_true_df.to_csv(os.path.join(output_dir, 'test_y_true.csv'), index=False, header=False)
 
-        # 同时保留 NumPy 文件
+        # Also save NumPy files
         np.save(os.path.join(output_dir, 'test_y_pred.npy'), y_pred)
         np.save(os.path.join(output_dir, 'test_y_true.npy'), y_true)
-
-    # Get predictions and ground truth
-    # y_pred = model.test_output
-    # y_true = model.test_true
-
-    # import pandas as pd
-    # # Replace the existing saving code with:
-    # if save_predictions:
-    #     # Convert NumPy arrays to pandas DataFrame
-    #     y_pred_df = pd.DataFrame(y_pred)
-    #     y_true_df = pd.DataFrame(y_true)
-
-    #     # Save as CSV files
-    #     y_pred_df.to_csv(os.path.join(output_dir, 'test_y_pred.csv'), index=False, header=False)
-    #     y_true_df.to_csv(os.path.join(output_dir, 'test_y_true.csv'), index=False, header=False)
-
-    # # Optional: If you want to keep the original .npy files as well
-    # # np.save(os.path.join(output_dir, 'test_y_pred.npy'), y_pred)
-    # # np.save(os.path.join(output_dir, 'test_y_true.npy'), y_true)
-    # # # Save predictions if requested
-    # # if save_predictions:
-    # #     np.save(os.path.join(output_dir, 'test_y_pred.npy'), y_pred)
-    # #     np.save(os.path.join(output_dir, 'test_y_true.npy'), y_true)
-    #     # np.save(os.path.join(output_dir, 'test_y_pred.csv'), y_pred)
-    #     # np.save(os.path.join(output_dir, 'test_y_true.csv'), y_true)
 
     # Create prediction visualization
     try:
@@ -778,6 +780,12 @@ def train_and_evaluate_ensemble(args, logger) -> Dict[str, Any]:
         trainer, train_metrics = train_model(
             args, model, train_loader, val_loader, loggers, callbacks, logger
         )
+
+        # Log scaler state after training
+        if hasattr(model, 'scaler') and model.scaler is not None:
+            logger.info(f"Ensemble member {i + 1} trained with scaler type: {type(model.scaler).__name__}")
+            if hasattr(model.scaler, 'mean_'):
+                logger.info(f"Scaler mean: {model.scaler.mean_}")
 
         # Evaluate model
         test_metrics = evaluate_model(
@@ -957,7 +965,6 @@ def visualize_results(output_dir: str, logger: logging.Logger) -> None:
         logger.warning(f"Failed to plot learning rate curve: {e}")
 
     # Plot attention weights if available
-
     try:
         plot_attention_weights(output_dir, plot_dir=viz_dir)
         logger.info("Attention weights plotted successfully")
@@ -982,6 +989,8 @@ def main() -> None:
     """
     Main training function.
     """
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
     # Set number of threads for better reproducibility
     torch.set_num_threads(1)
 

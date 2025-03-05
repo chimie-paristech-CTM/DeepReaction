@@ -5,27 +5,13 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="94731d45-201e-4dbc-a4e7-9a36e7716e22" name="更改" comment="">
-      <change afterPath="$PROJECT_DIR$/example/train.sh" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/test/train.sh" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/test/train_demo.ipynb" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.gitattributes" beforeDir="false" afterPath="$PROJECT_DIR$/.gitattributes" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/deep/cli/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/deep/cli/__init__.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/deep/cli/finetune.py" beforeDir="false" afterPath="$PROJECT_DIR$/deep/cli/finetune.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/deep/cli/inference.py" beforeDir="false" afterPath="$PROJECT_DIR$/deep/cli/inference.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/deep/cli/train.py" beforeDir="false" afterPath="$PROJECT_DIR$/deep/cli/train.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/deep/model/head.py" beforeDir="false" afterPath="$PROJECT_DIR$/deep/model/head.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/example/finetune.sh" beforeDir="false" afterPath="$PROJECT_DIR$/example/finetune.sh" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/example/finetune_full.sh" beforeDir="false" afterPath="$PROJECT_DIR$/example/finetune_full.sh" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/example/finetune_lowlr.sh" beforeDir="false" afterPath="$PROJECT_DIR$/example/finetune_lowlr.sh" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/example/hyperopt.sh" beforeDir="false" afterPath="$PROJECT_DIR$/example/hyperopt.sh" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/example/inference.sh" beforeDir="false" afterPath="$PROJECT_DIR$/example/inference.sh" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/enviroment.yml" beforeDir="false" afterPath="$PROJECT_DIR$/environment.yml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/example/train_demo.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/example/train_demo.ipynb" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/test/finetune.sh" beforeDir="false" afterPath="$PROJECT_DIR$/test/finetune.sh" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/test/finetune_full.sh" beforeDir="false" afterPath="$PROJECT_DIR$/test/finetune_full.sh" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/test/finetune_lowlr.sh" beforeDir="false" afterPath="$PROJECT_DIR$/test/finetune_lowlr.sh" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/test/hyperopt.sh" beforeDir="false" afterPath="$PROJECT_DIR$/test/hyperopt.sh" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/test/inference.sh" beforeDir="false" afterPath="$PROJECT_DIR$/test/inference.sh" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test/train_demo.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/test/train_demo.ipynb" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/train_demo.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/train_demo.ipynb" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -86,7 +72,7 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1741106590522</updated>
-      <workItem from="1741106592039" duration="6382000" />
+      <workItem from="1741106592039" duration="8686000" />
     </task>
     <servers />
   </component>

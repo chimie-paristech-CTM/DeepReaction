@@ -8,12 +8,6 @@ on new datasets or for specific tasks. It supports:
 2. Fine-tuning on new datasets with flexible hyperparameter control
 3. Evaluation and model saving
 
-Example usage:
-    python -m cli.finetune --model_path /path/to/pretrained/model 
-                          --dataset QM9 
-                          --target_id 0 
-                          --lr 1e-4 
-                          --max_epochs 20
 """
 
 import os
@@ -143,6 +137,10 @@ def create_finetune_argparser() -> argparse.ArgumentParser:
                         help="CSV file containing reaction data")
     parser.add_argument("--use_scaler", action="store_true",
                         help="Whether to use a scaler for the target values")
+    parser.add_argument("--use_dataset_scaler", action="store_true", default=False,
+                        help="Use a new scaler from the fine-tuning dataset instead of the pre-trained model's scaler")
+    parser.add_argument("--preserve_original_scaler", action="store_true", default=True,
+                        help="Preserve the original scaler from the pre-trained model (ignored if --use_dataset_scaler is set)")
     parser.add_argument("--max_num_atoms", type=int, default=100,
                         help="Maximum number of atoms in a molecule")
 
@@ -256,6 +254,24 @@ def load_pretrained_model(
     if 'hyper_parameters' in checkpoint:
         hparams = checkpoint['hyper_parameters']
         logger.info(f"Loaded hyperparameters from checkpoint")
+
+        # Check for scaler in hyperparameters
+        if 'scaler' in hparams:
+            if hparams['scaler'] is not None:
+                logger.info("Found scaler in model hyperparameters")
+                # Logging scaler details if available
+                scaler = hparams['scaler']
+                logger.info(f"Model checkpoint scaler type: {type(scaler).__name__}")
+                if hasattr(scaler, 'mean_'):
+                    logger.info(f"Model scaler mean: {scaler.mean_}")
+                if hasattr(scaler, 'scale_'):
+                    logger.info(f"Model scaler scale: {scaler.scale_}")
+                if hasattr(scaler, 'var_'):
+                    logger.info(f"Model scaler variance: {scaler.var_}")
+            else:
+                logger.info("Scaler in model hyperparameters is None")
+        else:
+            logger.info("No scaler found in model hyperparameters")
     else:
         # If hyperparameters not in checkpoint, use default values
         logger.warning("No hyperparameters found in checkpoint, using defaults")
@@ -291,6 +307,16 @@ def load_pretrained_model(
             logger.warning("Continuing with partial model loading")
         else:
             raise
+
+    # Check if scaler is available in the loaded model
+    if hasattr(model, 'scaler') and model.scaler is not None:
+        logger.info(f"Loaded model has a scaler of type: {type(model.scaler).__name__}")
+        if hasattr(model.scaler, 'mean_'):
+            logger.info(f"Original model scaler mean: {model.scaler.mean_}")
+        if hasattr(model.scaler, 'scale_'):
+            logger.info(f"Original model scaler scale: {model.scaler.scale_}")
+    else:
+        logger.warning("Loaded model does not have a scaler attached")
 
     # Modify model for fine-tuning
     if args.freeze_backbone:
@@ -373,6 +399,19 @@ def load_datasets(args, logger) -> Tuple[GeometricDataLoader, GeometricDataLoade
         train, val, test, scaler = load_MD17(ds=args.dataset, download_dir=args.dataset_download_dir)
     else:
         raise ValueError(f"Unsupported dataset: {args.dataset}")
+
+    # Log scaler information if available
+    if args.use_scaler and scaler is not None:
+        logger.info(f"Dataset loaded with scaler type: {type(scaler).__name__}")
+        if hasattr(scaler, 'mean_'):
+            logger.info(f"Dataset scaler mean: {scaler.mean_}")
+        if hasattr(scaler, 'scale_'):
+            logger.info(f"Dataset scaler scale: {scaler.scale_}")
+    else:
+        if args.use_scaler:
+            logger.warning("use_scaler is True but no scaler was returned from dataset loader")
+        else:
+            logger.info("No scaler being used from dataset (use_scaler=False)")
 
     # Configure data loader parameters
     dataloader_kwargs = {
@@ -558,6 +597,16 @@ def fine_tune_model(
     """
     logger.info("Initializing fine-tuning")
 
+    # Verify model's scaler state before fine-tuning
+    if hasattr(model, 'scaler') and model.scaler is not None:
+        logger.info(f"Model has scaler of type for fine-tuning: {type(model.scaler).__name__}")
+        if hasattr(model.scaler, 'mean_'):
+            logger.info(f"Fine-tuning model scaler mean: {model.scaler.mean_}")
+        if hasattr(model.scaler, 'scale_'):
+            logger.info(f"Fine-tuning model scaler scale: {model.scaler.scale_}")
+    else:
+        logger.info("Model does not have a scaler for fine-tuning")
+
     # Configure trainer parameters
     trainer_config = {
         'logger': loggers,
@@ -595,6 +644,14 @@ def fine_tune_model(
     logger.info(f"Fine-tuning completed in {fine_tuning_time:.2f} seconds")
     logger.info(f"Best epoch: {metrics['best_epoch']}")
 
+    # Verify model's scaler state after fine-tuning
+    if hasattr(model, 'scaler') and model.scaler is not None:
+        logger.info(f"After fine-tuning, model has scaler of type: {type(model.scaler).__name__}")
+        if hasattr(model.scaler, 'mean_'):
+            logger.info(f"Final model scaler mean: {model.scaler.mean_}")
+        if hasattr(model.scaler, 'scale_'):
+            logger.info(f"Final model scaler scale: {model.scaler.scale_}")
+
     return trainer, metrics
 
 
@@ -621,6 +678,16 @@ def evaluate_model(
         Dict[str, Any]: Evaluation metrics
     """
     logger.info("Evaluating model on test set")
+
+    # Verify model's scaler state before evaluation
+    if hasattr(model, 'scaler') and model.scaler is not None:
+        logger.info(f"Model has scaler of type for evaluation: {type(model.scaler).__name__}")
+        if hasattr(model.scaler, 'mean_'):
+            logger.info(f"Evaluation model scaler mean: {model.scaler.mean_}")
+        if hasattr(model.scaler, 'scale_'):
+            logger.info(f"Evaluation model scaler scale: {model.scaler.scale_}")
+    else:
+        logger.info("Model does not have a scaler for evaluation")
 
     # Test model
     test_results = trainer.test(model, dataloaders=test_loader)
@@ -714,10 +781,23 @@ def main():
     # Load datasets
     train_loader, val_loader, test_loader, scaler = load_datasets(args, logger)
 
-    # Update scaler if needed
+    # Handle scaler based on command line arguments
     if args.use_scaler:
-        model.scaler = scaler
+        if args.use_dataset_scaler:
+            logger.info("Using new scaler from fine-tuning dataset")
+            model.scaler = scaler
+        elif not args.preserve_original_scaler or not hasattr(model, 'scaler') or model.scaler is None:
+            logger.info("Using dataset scaler because no model scaler is available or preservation is disabled")
+            model.scaler = scaler
+        else:
+            logger.info("Preserving original scaler from pre-trained model")
+            # Log information about the preserved scaler
+            if hasattr(model.scaler, 'mean_'):
+                logger.info(f"Original scaler mean: {model.scaler.mean_}")
+            if hasattr(model.scaler, 'scale_'):
+                logger.info(f"Original scaler scale: {model.scaler.scale_}")
     else:
+        logger.info("No scaler will be used (use_scaler=False)")
         model.scaler = None
 
     # Set up loggers
