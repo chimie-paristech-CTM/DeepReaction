@@ -1,6 +1,3 @@
-"""
-model/head.py
-"""
 import torch
 import torch.nn as nn
 
@@ -8,10 +5,10 @@ class MLPHead(nn.Module):
     def __init__(self, input_dim: int, output_dim: int, dropout: float = 0.0, use_layer_norm: bool = False):
         """
         Args:
-            input_dim (int): 输入维度
-            output_dim (int): 输出维度（如 1 用于回归任务）
-            dropout (float): dropout 概率，默认为 0.0
-            use_layer_norm (bool): 是否使用 LayerNorm，默认为 False
+            input_dim (int): Input dimension
+            output_dim (int): Output dimension (e.g., 1 for regression tasks)
+            dropout (float): Dropout probability, default is 0.0
+            use_layer_norm (bool): Whether to use LayerNorm, default is False
         """
         super(MLPHead, self).__init__()
         layers = []

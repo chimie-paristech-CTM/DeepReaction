@@ -23,8 +23,8 @@ MC_SAMPLES=10
 MAX_NUM_ATOMS=100
 
 # XTB dataset specific parameters
-REACTION_ROOT="/root/attention-based-pooling-for-quantum-properties-main/data_loading/DATASET_DA"
-REACTION_CSV="/root/attention-based-pooling-for-quantum-properties-main/data_loading/DATASET_DA/DA_dataset_cleaned.csv"
+REACTION_ROOT="${SCRIPT_DIR}/dataset/DATASET_DA"
+REACTION_CSV="${SCRIPT_DIR}/dataset/DATASET_DA/DA_dataset_cleaned.csv"
 
 # Parse command line arguments
 function print_usage {
