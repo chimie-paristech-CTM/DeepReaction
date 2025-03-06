@@ -10,14 +10,14 @@ set -e
 PYTHON_ENV="python"  # Change to your conda environment if needed
 SCRIPT_DIR=$(dirname "$(realpath "$0")")
 FINETUNE_SCRIPT="${SCRIPT_DIR}/deep/cli/finetune.py"
-MODEL_PATH="${SCRIPT_DIR}/results/xtb/dimenet++/XTB/42/0/mean/XTB_target0_dimenet++_mean_seed42_20250304_114228/checkpoints/best-epoch=0000-val_total_loss=0.1673.ckpt"   # Change to your pre-trained model path
+MODEL_PATH="${SCRIPT_DIR}/results/xtb/dimenet++/XTB/42/0/mean/XTB_target0_dimenet++_mean_seed42_20250306_153356/checkpoints/best-epoch=0000-val_total_loss=0.1303.ckpt"   # Change to your pre-trained model path
 OUTPUT_DIR="${SCRIPT_DIR}/results/finetune/freeze_backbone"
 
 # Default parameters
 DATASET="XTB"
 TARGET_ID=0
 BATCH_SIZE=16
-EPOCHS=1
+EPOCHS=20
 MIN_EPOCHS=1
 EARLY_STOPPING=10
 LR=0.0001
@@ -30,8 +30,39 @@ DROPOUT=0.1
 MAX_NUM_ATOMS=100
 
 # XTB dataset specific parameters
-REACTION_ROOT="${SCRIPT_DIR}/dataset/DATASET_DA"
-REACTION_CSV="${SCRIPT_DIR}/dataset/DATASET_DA/DA_dataset_cleaned.csv"
+REACTION_ROOT="${SCRIPT_DIR}/dataset/DATASET_DA_DFT_F"
+REACTION_CSV="${SCRIPT_DIR}/dataset/DATASET_DA_DFT_F/da_dataset_dft.csv"
+ENERGY_FIELD="G(TS)"   # Default: auto-detect from common field names
+REACTANT_SUFFIX="_reactant_xtb_noreopt.xyz"
+TS_SUFFIX="_ts_dft.xyz"
+PRODUCT_SUFFIX="_product_dft.xyz"
+
+# Parse command line arguments for energy field and file suffixes
+while [[ $# -gt 0 ]]; do
+    key="$1"
+    case $key in
+        --energy-field)
+            ENERGY_FIELD="$2"
+            shift 2
+            ;;
+        --reactant-suffix)
+            REACTANT_SUFFIX="$2"
+            shift 2
+            ;;
+        --ts-suffix)
+            TS_SUFFIX="$2"
+            shift 2
+            ;;
+        --product-suffix)
+            PRODUCT_SUFFIX="$2"
+            shift 2
+            ;;
+        *)
+            # Skip unknown option
+            shift
+            ;;
+    esac
+done
 
 # Create command with all parameters
 CMD="${PYTHON_ENV} ${FINETUNE_SCRIPT}"
@@ -61,6 +92,14 @@ CMD="${CMD} --cuda"
 CMD="${CMD} --precision 16"  # Use mixed precision for faster training
 CMD="${CMD} --random_seed 42"
 
+# Add energy field parameter if specified
+if [ -n "$ENERGY_FIELD" ]; then
+    CMD="${CMD} --reaction_energy_field \"${ENERGY_FIELD}\""
+fi
+
+# Add file suffixes parameter
+CMD="${CMD} --reaction_file_suffixes \"${REACTANT_SUFFIX}\" \"${TS_SUFFIX}\" \"${PRODUCT_SUFFIX}\""
+
 # Create output directory if it doesn't exist
 mkdir -p "${OUTPUT_DIR}"
 
@@ -77,6 +116,15 @@ echo "- Scheduler:     ${SCHEDULER} (warmup: ${WARMUP_EPOCHS})"
 echo "- Strategy:      Freeze backbone (transfer learning)"
 echo "- Dataset root:  ${REACTION_ROOT}"
 echo "- Dataset CSV:   ${REACTION_CSV}"
+
+# Print energy field and file suffixes
+if [ -n "$ENERGY_FIELD" ]; then
+    echo "- Energy field:  ${ENERGY_FIELD}"
+else
+    echo "- Energy field:  Auto-detect"
+fi
+echo "- File suffixes: Reactant='${REACTANT_SUFFIX}', TS='${TS_SUFFIX}', Product='${PRODUCT_SUFFIX}'"
+
 echo "- Output dir:    ${OUTPUT_DIR}"
 echo ""
 echo "Command:"

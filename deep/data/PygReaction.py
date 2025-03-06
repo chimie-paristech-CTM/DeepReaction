@@ -69,20 +69,23 @@ class ReactionXYZDataset(InMemoryDataset):
       - Rnber: Sequence number (optional)
       - R_dir: Name of the xyz folder (e.g., reaction_R0), stored in data.id
       - reaction: Reaction SMILES or other description
-      - dG(ts): Target value (prediction y)
+      - dG(ts): Target value (prediction y) - Note: May be stored as "G(TS)" or "dG(ts)" in the CSV
 
     For each CSV record, the program will search for three xyz files in the corresponding folder under the dataset root:
-      - {prefix}_reactant.xyz (input 0), where the "reaction_" prefix is removed from the folder name
-      - {prefix}_ts.xyz (input 1)
-      - {prefix}_product.xyz (input 2)
+      - {prefix}{reactant_suffix} (input 0), where the "reaction_" prefix is removed from the folder name
+      - {prefix}{ts_suffix} (input 1)
+      - {prefix}{product_suffix} (input 2)
 
-    Atomic symbols are extracted from {prefix}_reactant.xyz (converted to atomic numbers z),
+    Atomic symbols are extracted from {prefix}{reactant_suffix} (converted to atomic numbers z),
     and atomic coordinates are extracted from all three files (pos0, pos1, pos2).
     Additionally, the CSV field ID is saved to data.reaction_id and R_dir is saved to data.id.
     """
 
-    def __init__(self, root, csv_file='DA_dataset_cleaned.csv', transform=None, pre_transform=None, pre_filter=None):
+    def __init__(self, root, csv_file='DA_dataset.csv', transform=None, pre_transform=None, pre_filter=None,
+                 energy_field=None, file_suffixes=None):
         self.csv_file = osp.join(root, csv_file)
+        self.energy_field = energy_field
+        self.file_suffixes = file_suffixes or ['_reactant.xyz', '_ts.xyz', '_product.xyz']
         super(ReactionXYZDataset, self).__init__(root, transform, pre_transform, pre_filter)
         self.data, self.slices = torch.load(self.processed_paths[0])
 
@@ -117,19 +120,43 @@ class ReactionXYZDataset(InMemoryDataset):
             reader = csv.DictReader(f)
             rows = list(reader)
 
+        # Check for field name variations
+        sample_row = rows[0] if rows else {}
+
+        # Use the provided energy field name or detect it
+        energy_field_name = self.energy_field
+        if not energy_field_name:
+            possible_energy_fields = ['dG(ts)', 'G(TS)', 'G(ts)', 'dG(TS)']
+            for field in possible_energy_fields:
+                if field in sample_row:
+                    energy_field_name = field
+                    break
+
+        if not energy_field_name:
+            print(f"Warning: Could not find energy field in CSV. Available fields: {list(sample_row.keys())}")
+            if 'DrG' in sample_row:
+                print("Found 'DrG' field, but this is typically the reaction energy, not the transition state energy.")
+            return
+
+        print(f"Using '{energy_field_name}' as the energy field")
+        # Unpack the file suffixes
+        reactant_suffix, ts_suffix, product_suffix = self.file_suffixes
+        print(f"Using file suffixes: reactant='{reactant_suffix}', ts='{ts_suffix}', product='{product_suffix}'")
+
         for row in tqdm(rows, desc="Processing reactions"):
             # Read fields from the CSV
             reaction_id = row.get('ID', '').strip()  # Reaction identifier
             R_dir = row.get('R_dir', '').strip()  # Folder name
             reaction_str = row.get('reaction', '').strip()
-            dG_ts_str = row.get('dG(ts)', '').strip()
+            dG_ts_str = row.get(energy_field_name, '').strip()
+
             if not reaction_id or not R_dir or not dG_ts_str:
                 print(f"Warning: Missing required fields, skipping record: {row}")
                 continue
             try:
                 dG_ts = float(dG_ts_str)
             except Exception as e:
-                print(f"Error parsing dG(ts) value {dG_ts_str} in reaction_id {reaction_id}: {e}")
+                print(f"Error parsing {energy_field_name} value {dG_ts_str} in reaction_id {reaction_id}: {e}")
                 continue
 
             # Construct the path for the xyz folder
@@ -143,13 +170,15 @@ class ReactionXYZDataset(InMemoryDataset):
             if prefix.startswith("reaction_"):
                 prefix = prefix[len("reaction_"):]
 
-            # Construct xyz file paths
-            reactant_file = osp.join(folder_path, f"{prefix}_reactant.xyz")
-            ts_file = osp.join(folder_path, f"{prefix}_ts.xyz")
-            product_file = osp.join(folder_path, f"{prefix}_product.xyz")
+            # Construct xyz file paths using the provided suffixes
+            reactant_file = osp.join(folder_path, f"{prefix}{reactant_suffix}")
+            ts_file = osp.join(folder_path, f"{prefix}{ts_suffix}")
+            product_file = osp.join(folder_path, f"{prefix}{product_suffix}")
+
             if not (osp.exists(reactant_file) and osp.exists(ts_file) and osp.exists(product_file)):
                 print(
                     f"Warning: One or more xyz files are missing in {folder_path}, skipping reaction_id {reaction_id}")
+                print(f"Looked for: {reactant_file}, {ts_file}, {product_file}")
                 continue
 
             # Read the reactant file and extract atomic symbols and coordinates
@@ -232,6 +261,4 @@ class ReactionXYZDataset(InMemoryDataset):
         valid_idx = torch.tensor(valid_idx, dtype=torch.long)
         test_idx = torch.tensor(test_idx, dtype=torch.long)
         return {'train': train_idx, 'valid': valid_idx, 'test': test_idx}
-
-
 

@@ -9,7 +9,7 @@ set -e
 PYTHON_ENV="python"  # Change to your conda environment if needed
 SCRIPT_DIR=$(dirname "$(realpath "$0")")
 INFERENCE_SCRIPT="${SCRIPT_DIR}/deep/cli/inference.py"
-MODEL_PATH="${SCRIPT_DIR}/results/xtb/dimenet++/XTB/42/0/mean/XTB_target0_dimenet++_mean_seed42_20250304_114228/checkpoints/best-epoch=0000-val_total_loss=0.1673.ckpt"  # Change to your trained model path
+MODEL_PATH="${SCRIPT_DIR}/results/xtb/dimenet++/XTB/42/0/mean/XTB_target0_dimenet++_mean_seed42_20250306_161916/checkpoints/best-epoch=0000-val_total_loss=0.1303.ckpt"  # Change to your trained model path
 OUTPUT_DIR="${SCRIPT_DIR}/results/inference"
 
 # Default parameters
@@ -23,8 +23,12 @@ MC_SAMPLES=10
 MAX_NUM_ATOMS=100
 
 # XTB dataset specific parameters
-REACTION_ROOT="${SCRIPT_DIR}/dataset/DATASET_DA"
-REACTION_CSV="${SCRIPT_DIR}/dataset/DATASET_DA/DA_dataset_cleaned.csv"
+REACTION_ROOT="${SCRIPT_DIR}/dataset/DATASET_DA_F"
+REACTION_CSV="${SCRIPT_DIR}/dataset/DATASET_DA_F/DA_dataset.csv"
+ENERGY_FIELD="G(TS)"  # Empty string means auto-detect from common field names
+REACTANT_SUFFIX="_reactant.xyz"
+TS_SUFFIX="_ts.xyz"
+PRODUCT_SUFFIX="_product.xyz"
 
 # Parse command line arguments
 function print_usage {
@@ -46,6 +50,11 @@ function print_usage {
     echo "                              (default: ${REACTION_ROOT})"
     echo "  --reaction-csv FILE         CSV file path for reaction dataset"
     echo "                              (default: ${REACTION_CSV})"
+    echo "  --energy-field NAME         Name of the energy field in the CSV file"
+    echo "                              (default: auto-detect from common names)"
+    echo "  --reactant-suffix SUFFIX    Suffix for reactant XYZ files (default: ${REACTANT_SUFFIX})"
+    echo "  --ts-suffix SUFFIX          Suffix for transition state XYZ files (default: ${TS_SUFFIX})"
+    echo "  --product-suffix SUFFIX     Suffix for product XYZ files (default: ${PRODUCT_SUFFIX})"
     echo "  -o, --output DIR            Output directory (default: ${OUTPUT_DIR})"
     echo "  --format FORMAT             Export format (default: csv)"
     echo "                              Options: csv, json, npy"
@@ -54,6 +63,7 @@ function print_usage {
     echo ""
     echo "Example:"
     echo "  $0 --model ./outputs/checkpoints/best.ckpt --dataset XTB --split test --uncertainty"
+    echo "  $0 --model ./outputs/checkpoints/best.ckpt --energy-field \"G(TS)\" --reactant-suffix \"_r.xyz\" --ts-suffix \"_t.xyz\" --product-suffix \"_p.xyz\""
     exit 1
 }
 
@@ -108,6 +118,22 @@ while [[ $# -gt 0 ]]; do
             REACTION_CSV="$2"
             shift 2
             ;;
+        --energy-field)
+            ENERGY_FIELD="$2"
+            shift 2
+            ;;
+        --reactant-suffix)
+            REACTANT_SUFFIX="$2"
+            shift 2
+            ;;
+        --ts-suffix)
+            TS_SUFFIX="$2"
+            shift 2
+            ;;
+        --product-suffix)
+            PRODUCT_SUFFIX="$2"
+            shift 2
+            ;;
         -o|--output)
             OUTPUT_DIR="$2"
             shift 2
@@ -149,6 +175,16 @@ CMD="${CMD} --reaction_dataset_csv ${REACTION_CSV}"
 CMD="${CMD} --max_num_atoms ${MAX_NUM_ATOMS}"
 CMD="${CMD} --output_dir ${OUTPUT_DIR}"
 
+# Add energy field parameter if specified
+if [ -n "$ENERGY_FIELD" ]; then
+    CMD="${CMD} --reaction_energy_field \"${ENERGY_FIELD}\""
+fi
+
+# Add file suffixes parameter if any of the suffixes are non-default
+if [ "$REACTANT_SUFFIX" != "_reactant.xyz" ] || [ "$TS_SUFFIX" != "_ts.xyz" ] || [ "$PRODUCT_SUFFIX" != "_product.xyz" ]; then
+    CMD="${CMD} --reaction_file_suffixes \"${REACTANT_SUFFIX}\" \"${TS_SUFFIX}\" \"${PRODUCT_SUFFIX}\""
+fi
+
 # Add optional parameters
 if [ "$UNCERTAINTY" = true ]; then
     CMD="${CMD} --uncertainty --monte_carlo_dropout ${MC_SAMPLES}"
@@ -179,7 +215,7 @@ fi
 CMD="${CMD} --save_predictions"
 
 # Add precision (default to mixed precision for faster inference)
-CMD="${CMD} --precision 16"
+CMD="${CMD} --precision 16-mixed"
 
 # Create output directory if it doesn't exist
 mkdir -p "${OUTPUT_DIR}"
@@ -203,6 +239,13 @@ else
 fi
 echo "- Dataset root:   ${REACTION_ROOT}"
 echo "- Dataset CSV:    ${REACTION_CSV}"
+# Print new parameters
+if [ -n "$ENERGY_FIELD" ]; then
+    echo "- Energy field:   ${ENERGY_FIELD}"
+else
+    echo "- Energy field:   Auto-detect"
+fi
+echo "- File suffixes:  Reactant='${REACTANT_SUFFIX}', TS='${TS_SUFFIX}', Product='${PRODUCT_SUFFIX}'"
 echo "- Output dir:     ${OUTPUT_DIR}"
 echo ""
 echo "Command:"

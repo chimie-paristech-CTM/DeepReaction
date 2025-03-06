@@ -6,13 +6,18 @@
   <component name="ChangeListManager">
     <list default="true" id="94731d45-201e-4dbc-a4e7-9a36e7716e22" name="更改" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/deep/cli/config.py" beforeDir="false" afterPath="$PROJECT_DIR$/deep/cli/config.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/deep/cli/finetune.py" beforeDir="false" afterPath="$PROJECT_DIR$/deep/cli/finetune.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/deep/cli/inference.py" beforeDir="false" afterPath="$PROJECT_DIR$/deep/cli/inference.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/deep/cli/train.py" beforeDir="false" afterPath="$PROJECT_DIR$/deep/cli/train.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/enviroment.yml" beforeDir="false" afterPath="$PROJECT_DIR$/environment.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/example/train_demo.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/example/train_demo.ipynb" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/test/train_demo.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/test/train_demo.ipynb" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/train_demo.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/train_demo.ipynb" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/deep/data/PygReaction.py" beforeDir="false" afterPath="$PROJECT_DIR$/deep/data/PygReaction.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/deep/data/load_Reaction.py" beforeDir="false" afterPath="$PROJECT_DIR$/deep/data/load_Reaction.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/deep/model/dimenetplusplus.py" beforeDir="false" afterPath="$PROJECT_DIR$/deep/model/dimenetplusplus.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/example/finetune.sh" beforeDir="false" afterPath="$PROJECT_DIR$/example/finetune.sh" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/example/inference.sh" beforeDir="false" afterPath="$PROJECT_DIR$/example/inference.sh" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test/finetune.sh" beforeDir="false" afterPath="$PROJECT_DIR$/test/finetune.sh" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test/inference.sh" beforeDir="false" afterPath="$PROJECT_DIR$/test/inference.sh" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/train.sh" beforeDir="false" afterPath="$PROJECT_DIR$/train.sh" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -25,9 +30,9 @@
   <component name="MarkdownSettingsMigration">
     <option name="stateVersion" value="1" />
   </component>
-  <component name="ProjectColorInfo"><![CDATA[{
-  "associatedIndex": 3
-}]]></component>
+  <component name="ProjectColorInfo">{
+  &quot;associatedIndex&quot;: 3
+}</component>
   <component name="ProjectId" id="2trO9iTUsqPzZ03oAfStwI8d901" />
   <component name="ProjectViewState">
     <option name="hideEmptyMiddlePackages" value="true" />
@@ -38,7 +43,7 @@
     "RunOnceActivity.OpenProjectViewOnStart": "true",
     "RunOnceActivity.ShowReadmeOnStart": "true",
     "git-widget-placeholder": "main",
-    "last_opened_file_path": "/Users/user/Documents/GitHub/deepreaction/test",
+    "last_opened_file_path": "/Users/user/Documents/GitHub/deepreaction/example",
     "node.js.detected.package.eslint": "true",
     "node.js.detected.package.tslint": "true",
     "node.js.selected.package.eslint": "(autodetect)",
@@ -50,8 +55,8 @@
 }]]></component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
-      <recent name="$PROJECT_DIR$/test" />
       <recent name="$PROJECT_DIR$/example" />
+      <recent name="$PROJECT_DIR$/test" />
     </key>
     <key name="MoveFile.RECENT_KEYS">
       <recent name="$PROJECT_DIR$" />
@@ -72,7 +77,8 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1741106590522</updated>
-      <workItem from="1741106592039" duration="8686000" />
+      <workItem from="1741106592039" duration="9284000" />
+      <workItem from="1741251359344" duration="3094000" />
     </task>
     <servers />
   </component>

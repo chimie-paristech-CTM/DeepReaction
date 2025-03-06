@@ -19,7 +19,7 @@ DATASET="XTB"
 TARGET_ID=0
 READOUT="mean"
 MODEL_TYPE="dimenet++"
-BATCH_SIZE=16
+BATCH_SIZE=32
 NODE_DIM=128
 RANDOM_SEED=42
 EPOCHS=1
@@ -34,8 +34,12 @@ WEIGHT_DECAY=0.0001
 DROPOUT=0.1
 
 # XTB dataset specific parameters
-REACTION_ROOT="${SCRIPT_DIR}/dataset/DATASET_DA"
-REACTION_CSV="${SCRIPT_DIR}/dataset/DATASET_DA/DA_dataset_cleaned.csv"
+REACTION_ROOT="${SCRIPT_DIR}/dataset/DATASET_DA_F"
+REACTION_CSV="${SCRIPT_DIR}/dataset/DATASET_DA_F/DA_dataset.csv"
+ENERGY_FIELD="G(TS)"  # Default: auto-detect from common field names
+REACTANT_SUFFIX="_reactant.xyz"
+TS_SUFFIX="_ts.xyz"
+PRODUCT_SUFFIX="_product.xyz"
 
 # Parse command line arguments
 function print_usage {
@@ -60,11 +64,17 @@ function print_usage {
     echo "                              (default: ${REACTION_ROOT})"
     echo "  --reaction-csv FILE         CSV file path for reaction dataset"
     echo "                              (default: ${REACTION_CSV})"
+    echo "  --energy-field NAME         Name of the energy field in the CSV file"
+    echo "                              (default: auto-detect from common names)"
+    echo "  --reactant-suffix SUFFIX    Suffix for reactant XYZ files (default: ${REACTANT_SUFFIX})"
+    echo "  --ts-suffix SUFFIX          Suffix for transition state XYZ files (default: ${TS_SUFFIX})"
+    echo "  --product-suffix SUFFIX     Suffix for product XYZ files (default: ${PRODUCT_SUFFIX})"
     echo "  --ckpt PATH                 Path to checkpoint to resume training"
     echo "  --cuda / --no-cuda          Enable/disable CUDA (default: enabled if available)"
     echo ""
     echo "Example:"
     echo "  $0 --batch 32 --epochs 200 --lr 0.0003 --output ./results/xtb_custom"
+    echo "  $0 --energy-field \"G(TS)\" --reactant-suffix \"_r.xyz\" --ts-suffix \"_t.xyz\" --product-suffix \"_p.xyz\""
     exit 1
 }
 
@@ -135,6 +145,22 @@ while [[ $# -gt 0 ]]; do
             REACTION_CSV="$2"
             shift 2
             ;;
+        --energy-field)
+            ENERGY_FIELD="$2"
+            shift 2
+            ;;
+        --reactant-suffix)
+            REACTANT_SUFFIX="$2"
+            shift 2
+            ;;
+        --ts-suffix)
+            TS_SUFFIX="$2"
+            shift 2
+            ;;
+        --product-suffix)
+            PRODUCT_SUFFIX="$2"
+            shift 2
+            ;;
         --ckpt)
             CKPT_PATH="$2"
             shift 2
@@ -179,6 +205,16 @@ CMD="${CMD} --reaction_dataset_csv ${REACTION_CSV}"
 CMD="${CMD} --save_best_model --save_predictions --save_visualizations"
 CMD="${CMD} --log_to_file --logger_type tensorboard"
 
+# Add energy field parameter if specified
+if [ -n "$ENERGY_FIELD" ]; then
+    CMD="${CMD} --reaction_energy_field \"${ENERGY_FIELD}\""
+fi
+
+# Add file suffixes parameter if any of the suffixes are non-default
+if [ "$REACTANT_SUFFIX" != "_reactant.xyz" ] || [ "$TS_SUFFIX" != "_ts.xyz" ] || [ "$PRODUCT_SUFFIX" != "_product.xyz" ]; then
+    CMD="${CMD} --reaction_file_suffixes \"${REACTANT_SUFFIX}\" \"${TS_SUFFIX}\" \"${PRODUCT_SUFFIX}\""
+fi
+
 # Add CUDA flag if specified
 if [ -n "$CUDA" ]; then
     CMD="${CMD} ${CUDA}"
@@ -214,6 +250,15 @@ echo "- Optimizer:     ${OPTIMIZER}"
 echo "- Scheduler:     ${SCHEDULER} (warmup: ${WARMUP_EPOCHS})"
 echo "- Dataset root:  ${REACTION_ROOT}"
 echo "- Dataset CSV:   ${REACTION_CSV}"
+
+# Print new parameters if specified
+if [ -n "$ENERGY_FIELD" ]; then
+    echo "- Energy field:  ${ENERGY_FIELD}"
+else
+    echo "- Energy field:  Auto-detect"
+fi
+echo "- File suffixes: Reactant='${REACTANT_SUFFIX}', TS='${TS_SUFFIX}', Product='${PRODUCT_SUFFIX}'"
+
 echo "- Output dir:    ${OUTPUT_DIR}"
 echo ""
 echo "Command:"

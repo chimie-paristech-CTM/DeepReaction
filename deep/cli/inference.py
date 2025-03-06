@@ -109,6 +109,11 @@ def create_inference_argparser() -> argparse.ArgumentParser:
                         help="Root directory for reaction dataset")
     parser.add_argument("--reaction_dataset_csv", type=str, default="reaction_data.csv",
                         help="CSV file containing reaction data")
+    parser.add_argument("--reaction_energy_field", type=str, default=None,
+                        help="Name of the energy field in the reaction dataset CSV (default: autodetect from common names)")
+    parser.add_argument("--reaction_file_suffixes", type=str, nargs=3,
+                        default=['_reactant.xyz', '_ts.xyz', '_product.xyz'],
+                        help="Suffixes for the three XYZ files (reactant, transition state, product)")
     parser.add_argument("--custom_input_file", type=str, default=None,
                         help="Path to custom input file (CSV, SDF, XYZ, or JSON)")
     parser.add_argument("--use_scaler", action="store_true", default=True,
@@ -349,7 +354,9 @@ def load_dataset(args, logger):
             args.random_seed,
             root=args.reaction_dataset_root,
             csv_file=args.reaction_dataset_csv,
-            use_scaler=args.use_scaler
+            use_scaler=args.use_scaler,
+            energy_field=args.reaction_energy_field,
+            file_suffixes=args.reaction_file_suffixes
         )
     elif args.dataset in ['benzene', 'aspirin', 'malonaldehyde', 'ethanol', 'toluene']:
         train, val, test, scaler = load_MD17(ds=args.dataset, download_dir=args.dataset_download_dir)

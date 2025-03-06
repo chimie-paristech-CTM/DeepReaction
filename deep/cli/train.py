@@ -312,7 +312,9 @@ def load_datasets(args, logger) -> Tuple[DataLoader, DataLoader, DataLoader, Any
             args.random_seed,
             root=args.reaction_dataset_root,
             csv_file=args.reaction_dataset_csv,
-            use_scaler=args.use_scaler
+            use_scaler=args.use_scaler,
+            energy_field=args.reaction_energy_field,
+            file_suffixes=args.reaction_file_suffixes
         )
     elif args.dataset in ['benzene', 'aspirin', 'malonaldehyde', 'ethanol', 'toluene']:
         train, val, test, scaler = load_MD17(ds=args.dataset, download_dir=args.dataset_download_dir)
@@ -439,7 +441,9 @@ def setup_cross_validation_dataloaders(args, logger) -> List[Tuple[DataLoader, D
             root=args.reaction_dataset_root,
             csv_file=args.reaction_dataset_csv,
             cv_folds=args.cross_validation_folds,
-            use_scaler=args.use_scaler
+            use_scaler=args.use_scaler,
+            energy_field=args.reaction_energy_field,
+            file_suffixes=args.reaction_file_suffixes
         )
 
     elif args.dataset in ['benzene', 'aspirin', 'malonaldehyde', 'ethanol', 'toluene']:

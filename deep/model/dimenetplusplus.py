@@ -320,8 +320,10 @@ class OutputPPBlock(nn.Module):
 
 
 # -------------------------------
-# DimeNet++ Model Implementation (Standalone, does not depend on external DimeNet)
+# DimeNet++ Model Implementation
 # -------------------------------
+
+
 class DimeNetPlusPlus(nn.Module):
     r"""DimeNet++ network implementation.
     This model takes multi-view inputs (pos0, pos1, pos2), computes predictions for each view, and averages them.
@@ -358,6 +360,9 @@ class DimeNetPlusPlus(nn.Module):
                                num_after_skip, act)
             for _ in range(num_blocks)
         ])
+
+        self.output_combination = Linear(out_channels * 3, out_channels)
+
         self.reset_parameters()
 
     def reset_parameters(self):
@@ -367,6 +372,8 @@ class DimeNetPlusPlus(nn.Module):
             out_block.reset_parameters()
         for interaction in self.interaction_blocks:
             interaction.reset_parameters()
+        glorot_orthogonal(self.output_combination.weight, scale=2.0)
+        self.output_combination.bias.data.fill_(0)
 
     def triplets(self, edge_index, num_nodes):
         """
@@ -421,7 +428,8 @@ class DimeNetPlusPlus(nn.Module):
         _, P0 = self._forward_single(z, pos0, batch)
         _, P1 = self._forward_single(z, pos1, batch)
         _, P2 = self._forward_single(z, pos2, batch)
-        P = (P0 + P1 + P2) / 3
+        P_concat = torch.cat([P0, P1, P2], dim=1)
+        P = self.output_combination(P_concat)
         return None, P
 
     @classmethod

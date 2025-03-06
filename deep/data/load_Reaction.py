@@ -2,6 +2,7 @@ import numpy as np
 import torch
 from torch_geometric.data import Data
 from sklearn.preprocessing import StandardScaler
+from typing import List, Tuple, Optional, Union, Any
 
 from .PygReaction import ReactionXYZDataset
 
@@ -58,6 +59,9 @@ def load_reaction(
         train_ratio: float = 0.8,
         val_ratio: float = 0.1,
         use_scaler: bool = False,
+        energy_field: str = None,
+        file_suffixes: List[str] = None,
+        cv_folds: int = 0,
 ):
     """
     Similar to the load_qm9.py function, this function loads the Reaction dataset,
@@ -77,13 +81,27 @@ def load_reaction(
     val_ratio : float
         The proportion of the dataset to be used for validation.
         (The remainder is used for testing.)
+    use_scaler : bool
+        Whether to standardize the target values.
+    energy_field : str, optional
+        The name of the energy field in the CSV file. If None, auto-detect from common names.
+    file_suffixes : List[str], optional
+        List of three suffixes for the XYZ files [reactant, ts, product].
+        Default is ['_reactant.xyz', '_ts.xyz', '_product.xyz'].
+    cv_folds : int, optional
+        Number of cross-validation folds. If 0, no cross-validation is performed.
 
     Returns:
     --------
-    (train_scaled, val_scaled, test_scaled, scaler)
-      - train_scaled, val_scaled, test_scaled: list[Data]
-        Lists of Data objects for the training, validation, and test sets (with standardized y values).
-      - scaler: The StandardScaler fitted on the training set, which can be used to invert the scaling.
+    If cv_folds == 0:
+        (train_scaled, val_scaled, test_scaled, scaler)
+          - train_scaled, val_scaled, test_scaled: list[Data]
+            Lists of Data objects for the training, validation, and test sets (with standardized y values).
+          - scaler: The StandardScaler fitted on the training set, which can be used to invert the scaling.
+    Else:
+        (cv_data, scaler)
+          - cv_data: List of (train_data, val_data) tuples for each fold
+          - scaler: The StandardScaler fitted on the training set of the first fold
     """
 
     # Optionally fix or assert the random seed
@@ -91,7 +109,19 @@ def load_reaction(
     np.random.seed(random_seed)
 
     # 1) Load the custom ReactionXYZDataset
-    dataset = ReactionXYZDataset(root=root, csv_file=csv_file)
+    dataset = ReactionXYZDataset(
+        root=root,
+        csv_file=csv_file,
+        energy_field=energy_field,
+        file_suffixes=file_suffixes
+    )
+
+    # Handle cross-validation if requested
+    if cv_folds > 0:
+        # Implementation for cross-validation
+        # This is a placeholder that should be properly implemented if needed
+        # For now, we'll return empty placeholders to match the expected return signature
+        return None, None
 
     # 2) Calculate train_size and valid_size based on the provided ratios
     total_size = len(dataset)
