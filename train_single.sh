@@ -13,7 +13,7 @@ MODEL_TYPE="dimenet++"
 BATCH_SIZE=32
 NODE_DIM=128
 RANDOM_SEED=42
-EPOCHS=5
+EPOCHS=50
 MIN_EPOCHS=0
 EARLY_STOPPING=40
 LR=0.0005
@@ -31,39 +31,18 @@ TRAIN_RATIO=0.8
 VAL_RATIO=0.1
 TEST_RATIO=0.1
 
-# Cross-validation parameters
-CV_FOLDS=5
-CV_TEST_FOLD=-1
-CV_STRATIFY=0
-CV_GROUPED=1
-
 REACTION_ROOT="${SCRIPT_DIR}/dataset/DATASET_DA_F"
 DATASET_CSV="${SCRIPT_DIR}/dataset/DATASET_DA_F/dataset_xtb_goodvibe_updated.csv"
-TARGET_FIELDS=("G(TS)" "DrG")
-TARGET_WEIGHTS=(1.0 1.0)
+TARGET_FIELDS=("G(TS)")
+TARGET_WEIGHTS=(1.0)
 REACTANT_SUFFIX="_reactant.xyz"
 TS_SUFFIX="_ts.xyz"
 PRODUCT_SUFFIX="_product.xyz"
-INPUT_FEATURES=("G(TS)_xtb" "DrG_xtb")
+INPUT_FEATURES=("G(TS)_xtb" )
 
 # Default values for separate dataset files (null if not provided)
-# VAL_CSV="${SCRIPT_DIR}/dataset/DATASET_DA_F/dataset_xtb_goodvibe_updated.csv"
-# TEST_CSV="${SCRIPT_DIR}/dataset/DATASET_DA_F/dataset_xtb_goodvibe_updated.csv"
-
-# Model parameters
-HIDDEN_CHANNELS=128
-NUM_BLOCKS=4
-INT_EMB_SIZE=64
-BASIS_EMB_SIZE=8
-OUT_EMB_CHANNELS=256
-NUM_SPHERICAL=7
-NUM_RADIAL=6
-CUTOFF=5.0
-ENVELOPE_EXPONENT=5
-NUM_BEFORE_SKIP=1
-NUM_AFTER_SKIP=2
-NUM_OUTPUT_LAYERS=3
-MAX_NUM_NEIGHBORS=32
+VAL_CSV=""
+TEST_CSV=""
 
 # Parse command line arguments
 while [[ $# -gt 0 ]]; do
@@ -90,25 +69,8 @@ while [[ $# -gt 0 ]]; do
         --dataset-csv) DATASET_CSV="$2"; shift 2 ;;
         --val-csv) VAL_CSV="$2"; shift 2 ;;
         --test-csv) TEST_CSV="$2"; shift 2 ;;
-        --model-type) MODEL_TYPE="$2"; shift 2 ;;
-        --hidden-channels) HIDDEN_CHANNELS="$2"; shift 2 ;;
-        --num-blocks) NUM_BLOCKS="$2"; shift 2 ;;
-        --int-emb-size) INT_EMB_SIZE="$2"; shift 2 ;;
-        --basis-emb-size) BASIS_EMB_SIZE="$2"; shift 2 ;;
-        --out-emb-channels) OUT_EMB_CHANNELS="$2"; shift 2 ;;
-        --num-spherical) NUM_SPHERICAL="$2"; shift 2 ;;
-        --num-radial) NUM_RADIAL="$2"; shift 2 ;;
-        --cutoff) CUTOFF="$2"; shift 2 ;;
-        --envelope-exponent) ENVELOPE_EXPONENT="$2"; shift 2 ;;
-        --num-before-skip) NUM_BEFORE_SKIP="$2"; shift 2 ;;
-        --num-after-skip) NUM_AFTER_SKIP="$2"; shift 2 ;;
-        --num-output-layers) NUM_OUTPUT_LAYERS="$2"; shift 2 ;;
-        --max-num-neighbors) MAX_NUM_NEIGHBORS="$2"; shift 2 ;;
-        --cv-folds) CV_FOLDS="$2"; shift 2 ;;
-        --cv-test-fold) CV_TEST_FOLD="$2"; shift 2 ;;
-        --cv-stratify) CV_STRATIFY=1; shift ;;
-        --no-cv-grouped) CV_GROUPED=0; shift ;;
         --target-fields)
+            # Parse target fields as a single string and clear default array
             TARGET_FIELDS=()
             IFS=' ' read -ra TEMP_FIELDS <<< "$2"
             for field in "${TEMP_FIELDS[@]}"; do
@@ -117,6 +79,7 @@ while [[ $# -gt 0 ]]; do
             shift 2
             ;;
         --target-weights)
+            # Parse target weights as a single string and clear default array
             TARGET_WEIGHTS=()
             IFS=' ' read -ra TEMP_WEIGHTS <<< "$2"
             for weight in "${TEMP_WEIGHTS[@]}"; do
@@ -128,6 +91,7 @@ while [[ $# -gt 0 ]]; do
         --ts-suffix) TS_SUFFIX="$2"; shift 2 ;;
         --product-suffix) PRODUCT_SUFFIX="$2"; shift 2 ;;
         --input-features)
+            # Parse input features as a single string and clear default array
             INPUT_FEATURES=()
             IFS=' ' read -ra TEMP_FEATURES <<< "$2"
             for feature in "${TEMP_FEATURES[@]}"; do
@@ -172,42 +136,15 @@ CMD="${CMD} --out_dir ${OUTPUT_DIR}"
 CMD="${CMD} --reaction_dataset_root ${REACTION_ROOT}"
 CMD="${CMD} --dataset_csv \"${DATASET_CSV}\""
 
-# Common model parameters
-CMD="${CMD} --hidden_channels ${HIDDEN_CHANNELS}"
-CMD="${CMD} --num_blocks ${NUM_BLOCKS}"
-CMD="${CMD} --int_emb_size ${INT_EMB_SIZE}"
-CMD="${CMD} --basis_emb_size ${BASIS_EMB_SIZE}"
-CMD="${CMD} --out_emb_channels ${OUT_EMB_CHANNELS}"
-CMD="${CMD} --num_spherical ${NUM_SPHERICAL}"
-CMD="${CMD} --num_radial ${NUM_RADIAL}"
-CMD="${CMD} --cutoff ${CUTOFF}"
-CMD="${CMD} --envelope_exponent ${ENVELOPE_EXPONENT}"
-CMD="${CMD} --num_before_skip ${NUM_BEFORE_SKIP}"
-CMD="${CMD} --num_after_skip ${NUM_AFTER_SKIP}"
-CMD="${CMD} --num_output_layers ${NUM_OUTPUT_LAYERS}"
-CMD="${CMD} --max_num_neighbors ${MAX_NUM_NEIGHBORS}"
-
-# Cross-validation parameters
-if [ ${CV_FOLDS} -gt 0 ]; then
-    CMD="${CMD} --cv_folds ${CV_FOLDS}"
-    CMD="${CMD} --cv_test_fold ${CV_TEST_FOLD}"
-    if [ ${CV_STRATIFY} -eq 1 ]; then
-        CMD="${CMD} --cv_stratify"
-    fi
-    if [ ${CV_GROUPED} -eq 0 ]; then
-        CMD="${CMD} --no-cv_grouped"
-    fi
+# Check if using separate validation and test files
+if [ -n "$VAL_CSV" ] && [ -n "$TEST_CSV" ]; then
+    CMD="${CMD} --val_csv \"${VAL_CSV}\""
+    CMD="${CMD} --test_csv \"${TEST_CSV}\""
 else
-    # Check if using separate validation and test files
-    if [ -n "$VAL_CSV" ] && [ -n "$TEST_CSV" ]; then
-        CMD="${CMD} --val_csv \"${VAL_CSV}\""
-        CMD="${CMD} --test_csv \"${TEST_CSV}\""
-    else
-        # Using single dataset with automatic splitting
-        CMD="${CMD} --train_ratio ${TRAIN_RATIO}"
-        CMD="${CMD} --val_ratio ${VAL_RATIO}"
-        CMD="${CMD} --test_ratio ${TEST_RATIO}"
-    fi
+    # Using single dataset with automatic splitting
+    CMD="${CMD} --train_ratio ${TRAIN_RATIO}"
+    CMD="${CMD} --val_ratio ${VAL_RATIO}"
+    CMD="${CMD} --test_ratio ${TEST_RATIO}"
 fi
 
 CMD="${CMD} --save_best_model --save_predictions"

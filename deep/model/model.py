@@ -1,111 +1,131 @@
-"""
-model/model.py
-"""
-
 import torch
 import torch.nn as nn
 from torch_geometric.utils import to_dense_batch
+from typing import List, Union, Optional, Dict, Any
 
-# Import existing models and components from the current codebase
-from .dimenet import DimeNet
-from .dimenetplusplus import DimeNetPlusPlus
+from .model_factory import ModelFactory
 from .readout import ReadoutFactory
-from .mlp import PredictionMLP
 
-
-class MoleculeModel(nn.Module):
-    def __init__(self, model_name: str = 'dimenet++', **model_kwargs):
-        """
-        Initialize the main model interface by selecting and loading a model based on the model_name parameter.
-
-        Args:
-            model_name (str): The model name. Supported values are 'dimenet' and 'dimenet++' (or 'dimenet_pp').
-            **model_kwargs: Parameters to pass to the corresponding model constructor.
-                Common parameters include:
-                    - hidden_channels: Dimension of hidden layers
-                    - out_channels: Output dimension (typically the latent representation dimension of nodes)
-                    - num_blocks: Number of interaction blocks
-                    - num_bilinear / int_emb_size / basis_emb_size / out_emb_channels: Specific parameters for DimeNet++
-                    - num_spherical, num_radial, cutoff, envelope_exponent, etc.
-        """
-        super(MoleculeModel, self).__init__()
-
-        model_name = model_name.lower()
-        if model_name == 'dimenet':
-            # Call the original DimeNet model (ensure that model_kwargs are set correctly)
-            self.model = DimeNet(**model_kwargs)
-        elif model_name in ['dimenet++', 'dimenet_pp']:
-            # Call the DimeNet++ model
-            self.model = DimeNetPlusPlus(**model_kwargs)
-        else:
-            raise ValueError(f"Unknown model_name: {model_name}. Supported: 'dimenet', 'dimenet++'.")
-
-    def forward(self, *args, **kwargs):
-        """
-        The forward function directly calls the internal model's forward.
-
-        Args:
-            *args, **kwargs: Parameters passed to the specific model's forward method.
-        Returns:
-            The output of the model.
-        """
-        return self.model(*args, **kwargs)
-
-
-class MoleculePredictionModel(nn.Module):
-    """
-    A complete molecular prediction model that includes a feature extractor, a readout layer, and a prediction head.
-    This unified interface allows assembling different components to build a complete model architecture.
-    """
+class EnhancedPredictionMLP(nn.Module):
     def __init__(
         self,
-        base_model_name: str = 'dimenet++',
+        input_dim: int,
+        output_dim: int = 1,
+        hidden_dim: int = 128,
+        num_hidden_layers: int = 3,
+        dropout: float = 0.0,
+        use_layer_norm: bool = False
+    ):
+        super().__init__()
+        
+        self.num_hidden_layers = num_hidden_layers
+        self.hidden_dim = hidden_dim
+        
+        # Build network layers
+        self.layers = nn.ModuleList()
+        self.layers.append(nn.Linear(input_dim, hidden_dim))
+        
+        for _ in range(1, num_hidden_layers):
+            self.layers.append(nn.Linear(hidden_dim, hidden_dim))
+        
+        self.fc_out = nn.Linear(hidden_dim, output_dim)
+        self.activation = nn.ReLU()
+        self.dropout = nn.Dropout(dropout) if dropout > 0 else nn.Identity()
+        
+        # Add layer normalization if requested
+        self.layer_norms = nn.ModuleList()
+        for _ in range(num_hidden_layers):
+            self.layer_norms.append(nn.LayerNorm(hidden_dim) if use_layer_norm else nn.Identity())
+    
+    def forward(self, x):
+        for i in range(self.num_hidden_layers):
+            x = self.layers[i](x)
+            x = self.activation(x)
+            x = self.dropout(x)
+            x = self.layer_norms[i](x)
+        
+        return self.fc_out(x)
+
+class MultiTargetPredictionHead(nn.Module):
+    def __init__(
+        self,
+        input_dim: int,
+        num_targets: int = 1,
+        hidden_dim: int = 128,
+        num_hidden_layers: int = 3,
+        dropout: float = 0.0,
+        use_layer_norm: bool = False,
+        additional_features_dim: int = 2,
+        use_xtb_features: bool = True
+    ):
+        super().__init__()
+        
+        self.num_targets = num_targets
+        self.use_xtb_features = use_xtb_features
+        
+        # Create a separate prediction head for each target
+        self.prediction_heads = nn.ModuleList()
+        for _ in range(num_targets):
+            head = EnhancedPredictionMLP(
+                input_dim=input_dim,
+                output_dim=1,
+                hidden_dim=hidden_dim,
+                num_hidden_layers=num_hidden_layers,
+                dropout=dropout,
+                use_layer_norm=use_layer_norm
+            )
+            self.prediction_heads.append(head)
+    
+    def forward(self, x):
+        # Generate predictions for each target
+        predictions = [head(x) for head in self.prediction_heads]
+        return torch.cat(predictions, dim=1)
+
+class MoleculePredictionModel(nn.Module):
+    def __init__(
+        self,
+        model_type: str = 'dimenet++',
         readout_type: str = 'sum',
         max_num_atoms: int = 100,
         node_dim: int = 128,
         output_dim: int = 1,
         dropout: float = 0.0,
         use_layer_norm: bool = False,
-        readout_kwargs: dict = None,
-        base_model_kwargs: dict = None,
+        readout_kwargs: Optional[Dict[str, Any]] = None,
+        model_kwargs: Optional[Dict[str, Any]] = None,
+        use_xtb_features: bool = True,
+        prediction_hidden_layers: int = 3,
+        prediction_hidden_dim: int = 128,
+        num_xtb_features: int = 2
     ):
-        """
-        Initialize the molecular prediction model.
+        super().__init__()
 
-        Args:
-            base_model_name (str): The name of the base model, supports 'dimenet' and 'dimenet++'.
-            readout_type (str): The type of readout layer, supports 'sum', 'mean', 'max', 'attention', 'set_transformer'.
-            max_num_atoms (int): Maximum number of atoms.
-            node_dim (int): Node feature dimension.
-            output_dim (int): Output dimension.
-            dropout (float): Dropout rate.
-            use_layer_norm (bool): Whether to use layer normalization.
-            readout_kwargs (dict): Parameters for the readout layer.
-            base_model_kwargs (dict): Parameters for the base model.
-        """
-        super(MoleculePredictionModel, self).__init__()
-
-        # Initialize parameters
-        self.base_model_name = base_model_name
+        self.model_type = model_type
         self.readout_type = readout_type
         self.max_num_atoms = max_num_atoms
         self.node_dim = node_dim
+        self.output_dim = output_dim
+        self.use_xtb_features = use_xtb_features
+        self.prediction_hidden_layers = prediction_hidden_layers
+        self.prediction_hidden_dim = prediction_hidden_dim
+        self.num_xtb_features = num_xtb_features
 
-        # Set default parameters
+        # Initialize default kwargs if None
         if readout_kwargs is None:
             readout_kwargs = {}
+        if model_kwargs is None:
+            model_kwargs = {}
 
-        if base_model_kwargs is None:
-            base_model_kwargs = {}
+        # Ensure model outputs have the correct dimension
+        model_kwargs['out_channels'] = node_dim
 
-        # Add default parameter for output channels if not provided
-        if 'out_channels' not in base_model_kwargs:
-            base_model_kwargs['out_channels'] = node_dim
+        # Create model components
+        self.base_model = ModelFactory.create_model(
+            model_type=model_type,
+            **model_kwargs
+        )
 
-        # Initialize the base model
-        self.base_model = MoleculeModel(model_name=base_model_name, **base_model_kwargs)
-
-        # Initialize the readout layer
+        # Setup readout module
         readout_params = {
             'node_dim': node_dim,
             'hidden_dim': readout_kwargs.get('hidden_dim', 128),
@@ -114,61 +134,48 @@ class MoleculePredictionModel(nn.Module):
             'num_sabs': readout_kwargs.get('num_sabs', 2)
         }
         self.readout = ReadoutFactory.create_readout(readout_type, **readout_params)
-
-        # Initialize the prediction head (MLP)
-        self.prediction_mlp = PredictionMLP(
-            input_dim=node_dim,
-            output_dim=output_dim,
-            hidden_dim=node_dim,
+        
+        # Setup prediction MLP with optional features
+        input_dim_for_mlp = node_dim + (num_xtb_features if use_xtb_features else 0)
+        
+        self.prediction_mlp = MultiTargetPredictionHead(
+            input_dim=input_dim_for_mlp,
+            num_targets=output_dim,
+            hidden_dim=prediction_hidden_dim,
+            num_hidden_layers=prediction_hidden_layers,
             dropout=dropout,
-            use_layer_norm=use_layer_norm
+            use_layer_norm=use_layer_norm,
+            additional_features_dim=num_xtb_features,
+            use_xtb_features=use_xtb_features
         )
 
-    def forward(self, pos0, pos1, pos2, atom_z, batch_mapping):
-        """
-        Forward pass through the model.
+    def forward(self, pos0, pos1, pos2, z0, z1, z2, batch_mapping, xtb_features=None):
+        # Get graph embeddings from base model
+        _, graph_embeddings = self.base_model(
+            z0=z0, z1=z1, z2=z2, 
+            pos0=pos0, pos1=pos1, pos2=pos2, 
+            batch=batch_mapping
+        )
+        
+        # Create dense node representation for potential use
+        dummy_nodes = torch.zeros((z0.size(0), self.node_dim), device=z0.device)
+        node_embeddings_dense, mask = to_dense_batch(
+            dummy_nodes, batch_mapping, 0, self.max_num_atoms
+        )
 
-        Args:
-            pos0: First position tensor.
-            pos1: Second position tensor.
-            pos2: Third position tensor.
-            atom_z: Atomic numbers.
-            batch_mapping: Batch mapping indices.
+        # Optionally add extra features to graph embeddings
+        if self.use_xtb_features and xtb_features is not None:
+            # Limit to the specified number of features if needed
+            if self.num_xtb_features is not None and xtb_features.shape[1] > self.num_xtb_features:
+                features_to_use = xtb_features[:, :self.num_xtb_features]
+            else:
+                features_to_use = xtb_features
+            
+            combined_features = torch.cat([graph_embeddings, features_to_use], dim=1)
+        else:
+            combined_features = graph_embeddings
 
-        Returns:
-            Tuple: (node_embeddings, graph_embeddings, predictions)
-        """
-        # Pass input through the DimeNet++ base model
-        _, node_embeddings = self.base_model(z=atom_z, pos0=pos0, pos1=pos1, pos2=pos2, batch=batch_mapping)
-
-        # Convert node embeddings to a dense batch representation
-        node_embeddings_dense, mask = to_dense_batch(node_embeddings, batch_mapping, 0, self.max_num_atoms)
-
-        # Apply the readout layer to aggregate node features into graph-level embeddings
-        graph_embeddings = self.readout(node_embeddings_dense, mask)
-
-        # Apply the prediction MLP and flatten the output for predictions
-        predictions = torch.flatten(self.prediction_mlp(graph_embeddings))
-
+        # Make predictions
+        predictions = self.prediction_mlp(combined_features)
+        
         return node_embeddings_dense, graph_embeddings, predictions
-
-    # Retain the original forward method as an alias for backward compatibility
-    def forward_legacy(self, z, pos0, pos1, pos2, batch):
-        """
-        Complete forward pass.
-
-        Args:
-            z (torch.Tensor): Atomic numbers.
-            pos0 (torch.Tensor): First atomic position.
-            pos1 (torch.Tensor): Second atomic position.
-            pos2 (torch.Tensor): Third atomic position.
-            batch (torch.Tensor): Batch indices.
-
-        Returns:
-            Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-                (node embeddings, graph embeddings, predictions)
-        """
-        return self.forward(pos0, pos1, pos2, z, batch)
-
-
-

@@ -21,22 +21,9 @@ from torch_geometric.nn.inits import glorot_orthogonal
 from torch_geometric.nn.resolver import activation_resolver
 
 import sympy as sym
-import tensorflow as tf
 
-# QM9 target property mapping (used when loading pretrained weights)
-qm9_target_dict = {
-    0: 'mu',
-    1: 'alpha',
-    2: 'homo',
-    3: 'lumo',
-    5: 'r2',
-    6: 'zpve',
-    7: 'U0',
-    8: 'U',
-    9: 'H',
-    10: 'G',
-    11: 'Cv',
-}
+
+
 
 # -------------------------------
 # Mathematical Utility Functions
@@ -323,14 +310,11 @@ class OutputPPBlock(nn.Module):
 # DimeNet++ Model Implementation
 # -------------------------------
 
-
 class DimeNetPlusPlus(nn.Module):
     r"""DimeNet++ network implementation.
-    This model takes multi-view inputs (pos0, pos1, pos2), computes predictions for each view, and averages them.
+    This model takes multi-view inputs (pos0, pos1, pos2 with corresponding z0, z1, z2),
+    computes predictions for each view, and combines them.
     """
-    url = ('https://raw.githubusercontent.com/gasteigerjo/dimenet/'
-           'master/pretrained/dimenet_pp')
-
     def __init__(self, hidden_channels: int, out_channels: int,
                  num_blocks: int, int_emb_size: int, basis_emb_size: int,
                  out_emb_channels: int, num_spherical: int, num_radial: int,
@@ -376,18 +360,8 @@ class DimeNetPlusPlus(nn.Module):
         self.output_combination.bias.data.fill_(0)
 
     def triplets(self, edge_index, num_nodes):
-        """
-        Compute triplets for the interaction blocks based on edge indices.
-
-        Args:
-            edge_index (Tensor): Tuple (row, col) representing edges from j -> i.
-            num_nodes (int): Number of nodes.
-        Returns:
-            A tuple of indices used for message passing.
-        """
         row, col = edge_index
         value = torch.arange(row.size(0), device=row.device)
-        # Create a sparse tensor representing the transposed adjacency matrix
         adj_t = SparseTensor(row=col, col=row, value=value,
                              sparse_sizes=(num_nodes, num_nodes))
         adj_t_row = adj_t[row]
@@ -402,7 +376,6 @@ class DimeNetPlusPlus(nn.Module):
         return col, row, idx_i, idx_j, idx_k, idx_kj, idx_ji
 
     def _forward_single(self, z, pos, batch=None):
-        # Construct edges using radius_graph
         edge_index = radius_graph(pos, r=self.cutoff, batch=batch,
                                   max_num_neighbors=self.max_num_neighbors)
         i, j, idx_i, idx_j, idx_k, idx_kj, idx_ji = self.triplets(edge_index, num_nodes=z.size(0))
@@ -410,9 +383,9 @@ class DimeNetPlusPlus(nn.Module):
         pos_i = pos[idx_i]
         pos_ji = pos[idx_j] - pos_i
         pos_ki = pos[idx_k] - pos_i
-        # Compute the cosine and sine components for the angle
+
         a = (pos_ji * pos_ki).sum(dim=-1)
-        b = torch.cross(pos_ji, pos_ki).norm(dim=-1)
+        b = torch.linalg.cross(pos_ji, pos_ki).norm(dim=-1)
         angle = torch.atan2(b, a)
         rbf = self.rbf(dist)
         sbf = self.sbf(dist, angle, idx_kj)
@@ -423,95 +396,23 @@ class DimeNetPlusPlus(nn.Module):
             P += output_block(x, rbf, i)
         return x, P
 
-    def forward(self, z, pos0, pos1, pos2, batch=None):
-        # Compute predictions for three different views separately and then average the results
-        _, P0 = self._forward_single(z, pos0, batch)
-        _, P1 = self._forward_single(z, pos1, batch)
-        _, P2 = self._forward_single(z, pos2, batch)
+    def forward(self, z0, z1, z2, pos0, pos1, pos2, batch=None):
+        _, P0 = self._forward_single(z0, pos0, batch)
+        _, P1 = self._forward_single(z1, pos1, batch)
+        _, P2 = self._forward_single(z2, pos2, batch)
+
+        if batch is not None:
+            from torch_scatter import scatter
+
+            num_graphs = batch.max().item() + 1
+
+            if P0.size(0) != num_graphs:
+                P0 = scatter(P0, batch, dim=0, dim_size=num_graphs, reduce='mean')
+            if P1.size(0) != num_graphs:
+                P1 = scatter(P1, batch, dim=0, dim_size=num_graphs, reduce='mean')
+            if P2.size(0) != num_graphs:
+                P2 = scatter(P2, batch, dim=0, dim_size=num_graphs, reduce='mean')
+
         P_concat = torch.cat([P0, P1, P2], dim=1)
         P = self.output_combination(P_concat)
         return None, P
-
-    @classmethod
-    def from_qm9_pretrained(cls, root: str, dataset: Dataset, target: int):
-        """
-        Load a pretrained model for the QM9 dataset.
-
-        Args:
-            root (str): Root directory for storing pretrained weights.
-            dataset (Dataset): Dataset object.
-            target (int): Target property index.
-        Returns:
-            A tuple containing the model and dataset splits (train, validation, test).
-        """
-        os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
-        if target not in qm9_target_dict or target == 4:
-            raise ValueError("Invalid target for QM9")
-        root = osp.expanduser(osp.normpath(root))
-        path = osp.join(root, 'pretrained_dimenet_pp', qm9_target_dict[target])
-        makedirs(path)
-        url = f'{cls.url}/{qm9_target_dict[target]}'
-        if not osp.exists(osp.join(path, 'checkpoint')):
-            download_url(f'{url}/checkpoint', path)
-            download_url(f'{url}/ckpt.data-00000-of-00002', path)
-            download_url(f'{url}/ckpt.data-00001-of-00002', path)
-            download_url(f'{url}/ckpt.index', path)
-        path = osp.join(path, 'ckpt')
-        reader = tf.train.load_checkpoint(path)
-
-        model = cls(
-            hidden_channels=128,
-            out_channels=1,
-            num_blocks=4,
-            int_emb_size=64,
-            basis_emb_size=8,
-            out_emb_channels=256,
-            num_spherical=7,
-            num_radial=6,
-            cutoff=5.0,
-            max_num_neighbors=32,
-            envelope_exponent=5,
-            num_before_skip=1,
-            num_after_skip=2,
-            num_output_layers=3,
-            act='swish',
-        )
-
-        def copy_(src, name):
-            # Helper function to copy pretrained weights from checkpoint
-            init = reader.get_tensor(f'{name}/.ATTRIBUTES/VARIABLE_VALUE')
-            init = torch.from_numpy(init)
-            if name.endswith('kernel'):
-                init = init.t()
-            src.data.copy_(init)
-
-        copy_(model.rbf.freq, 'rbf_layer/frequencies')
-        copy_(model.emb.emb.weight, 'emb_block/embeddings')
-        copy_(model.emb.lin_rbf.weight, 'emb_block/dense_rbf/kernel')
-        copy_(model.emb.lin_rbf.bias, 'emb_block/dense_rbf/bias')
-        copy_(model.emb.lin.weight, 'emb_block/dense/kernel')
-        copy_(model.emb.lin.bias, 'emb_block/dense/bias')
-
-        for i, block in enumerate(model.output_blocks):
-            copy_(block.lin_rbf.weight, f'output_blocks/{i}/dense_rbf/kernel')
-            copy_(block.lin_up.weight, f'output_blocks/{i}/up_projection/kernel')
-            for j, lin in enumerate(block.lins):
-                copy_(lin.weight, f'output_blocks/{i}/dense_layers/{j}/kernel')
-                copy_(lin.bias, f'output_blocks/{i}/dense_layers/{j}/bias')
-            copy_(block.lin.weight, f'output_blocks/{i}/dense_final/kernel')
-
-        for i, block in enumerate(model.interaction_blocks):
-            copy_(block.lin_rbf1.weight, f'int_blocks/{i}/dense_rbf1/kernel')
-            copy_(block.lin_rbf2.weight, f'int_blocks/{i}/dense_rbf2/kernel')
-            copy_(block.lin_sbf1.weight, f'int_blocks/{i}/dense_sbf1/kernel')
-            copy_(block.lin_sbf2.weight, f'int_blocks/{i}/dense_sbf2/kernel')
-            copy_(block.lin_ji.weight, f'int_blocks/{i}/dense_ji/kernel')
-            copy_(block.lin_ji.bias, f'int_blocks/{i}/dense_ji/bias')
-            copy_(block.lin_kj.weight, f'int_blocks/{i}/dense_kj/kernel')
-            copy_(block.lin_kj.bias, f'int_blocks/{i}/dense_kj/bias')
-        random_state = np.random.RandomState(seed=42)
-        perm = torch.from_numpy(random_state.permutation(np.arange(130831)))
-        train_idx = perm[:110000]
-        val_idx = perm[110000:120000]
-        test_idx = perm[120000:]
-        return model, (dataset[train_idx], dataset[val_idx], dataset[test_idx])

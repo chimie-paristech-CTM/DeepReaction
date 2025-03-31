@@ -7,16 +7,19 @@
     <list default="true" id="94731d45-201e-4dbc-a4e7-9a36e7716e22" name="更改" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/deep/cli/config.py" beforeDir="false" afterPath="$PROJECT_DIR$/deep/cli/config.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/deep/cli/finetune.py" beforeDir="false" afterPath="$PROJECT_DIR$/deep/cli/finetune.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/deep/cli/inference.py" beforeDir="false" afterPath="$PROJECT_DIR$/deep/cli/inference.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/deep/cli/hyperopt.py" beforeDir="false" afterPath="$PROJECT_DIR$/deep/cli/hyperopt.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/deep/cli/train.py" beforeDir="false" afterPath="$PROJECT_DIR$/deep/cli/train.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/deep/data/PygReaction.py" beforeDir="false" afterPath="$PROJECT_DIR$/deep/data/PygReaction.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/deep/data/load_MD17.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/deep/data/load_QM7.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/deep/data/load_QM8.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/deep/data/load_QM9.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/deep/data/load_QMugs.py" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/deep/data/load_Reaction.py" beforeDir="false" afterPath="$PROJECT_DIR$/deep/data/load_Reaction.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/deep/model/dimenetplusplus.py" beforeDir="false" afterPath="$PROJECT_DIR$/deep/model/dimenetplusplus.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/example/finetune.sh" beforeDir="false" afterPath="$PROJECT_DIR$/example/finetune.sh" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/example/inference.sh" beforeDir="false" afterPath="$PROJECT_DIR$/example/inference.sh" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/test/finetune.sh" beforeDir="false" afterPath="$PROJECT_DIR$/test/finetune.sh" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/test/inference.sh" beforeDir="false" afterPath="$PROJECT_DIR$/test/inference.sh" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/deep/model/model.py" beforeDir="false" afterPath="$PROJECT_DIR$/deep/model/model.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/deep/module/pl_wrap.py" beforeDir="false" afterPath="$PROJECT_DIR$/deep/module/pl_wrap.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/deep/utils/visualization.py" beforeDir="false" afterPath="$PROJECT_DIR$/deep/utils/visualization.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/train.sh" beforeDir="false" afterPath="$PROJECT_DIR$/train.sh" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -38,21 +41,21 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "RunOnceActivity.OpenProjectViewOnStart": "true",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "git-widget-placeholder": "main",
-    "last_opened_file_path": "/Users/user/Documents/GitHub/deepreaction/example",
-    "node.js.detected.package.eslint": "true",
-    "node.js.detected.package.tslint": "true",
-    "node.js.selected.package.eslint": "(autodetect)",
-    "node.js.selected.package.tslint": "(autodetect)",
-    "nodejs_package_manager_path": "npm",
-    "settings.editor.selected.configurable": "advanced.settings",
-    "vue.rearranger.settings.migration": "true"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;RunOnceActivity.OpenProjectViewOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
+    &quot;last_opened_file_path&quot;: &quot;/Users/user/Documents/GitHub/deepreaction/example&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;advanced.settings&quot;,
+    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   }
-}]]></component>
+}</component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
       <recent name="$PROJECT_DIR$/example" />
@@ -78,7 +81,30 @@
       <option name="presentableId" value="Default" />
       <updated>1741106590522</updated>
       <workItem from="1741106592039" duration="9284000" />
-      <workItem from="1741251359344" duration="3094000" />
+      <workItem from="1741251359344" duration="3750000" />
+      <workItem from="1741342869656" duration="561000" />
+      <workItem from="1741598859440" duration="810000" />
+      <workItem from="1741689486246" duration="585000" />
+      <workItem from="1741708098245" duration="564000" />
+      <workItem from="1741723832325" duration="584000" />
+      <workItem from="1741769822690" duration="589000" />
+      <workItem from="1741777073748" duration="583000" />
+      <workItem from="1741778410914" duration="525000" />
+      <workItem from="1741779109652" duration="140000" />
+      <workItem from="1741779380058" duration="598000" />
+      <workItem from="1741780405324" duration="598000" />
+      <workItem from="1741859831127" duration="468000" />
+      <workItem from="1741874528728" duration="1483000" />
+      <workItem from="1741941454955" duration="3456000" />
+      <workItem from="1742204104712" duration="738000" />
+      <workItem from="1742216127754" duration="595000" />
+      <workItem from="1742224199240" duration="595000" />
+      <workItem from="1742227420234" duration="598000" />
+      <workItem from="1742287605302" duration="781000" />
+      <workItem from="1742292019173" duration="577000" />
+      <workItem from="1742301113703" duration="597000" />
+      <workItem from="1743410736808" duration="191000" />
+      <workItem from="1743411008548" duration="562000" />
     </task>
     <servers />
   </component>
