@@ -16,7 +16,9 @@ dependencies:
   - pytorch-lightning
   - pytorch-geometric      
   - tensorboard
-  - tensorflow=2.8        
   - wandb
+  - seaborn
+  - torch_geometric
+  - rdkit
   - pip
  

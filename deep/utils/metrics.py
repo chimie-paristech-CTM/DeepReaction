@@ -488,3 +488,216 @@ def bootstrap_metric(
     upper_bound = np.percentile(bootstrap_values, upper_percentile)
     
     return metric_value, lower_bound, upper_bound
+import numpy as np
+from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
+import torch
+from typing import Dict, List, Union, Optional, Tuple, Any
+
+def compute_regression_metrics(y_true, y_pred, metrics=None):
+    """
+    Compute regression metrics between true and predicted values.
+
+    Args:
+        y_true: True values (numpy array)
+        y_pred: Predicted values (numpy array)
+        metrics: List of metrics to compute. Defaults to ['mae', 'rmse', 'r2']
+
+    Returns:
+        Dictionary with computed metrics
+    """
+    if metrics is None:
+        metrics = ['mae', 'rmse', 'r2']
+
+    results = {}
+
+    # Convert to numpy if tensors
+    if isinstance(y_true, torch.Tensor):
+        y_true = y_true.detach().cpu().numpy()
+    if isinstance(y_pred, torch.Tensor):
+        y_pred = y_pred.detach().cpu().numpy()
+
+    # Ensure arrays are flattened if needed
+    if len(y_true.shape) > 1 and y_true.shape[1] == 1:
+        y_true = y_true.flatten()
+    if len(y_pred.shape) > 1 and y_pred.shape[1] == 1:
+        y_pred = y_pred.flatten()
+
+    # Check shapes
+    if y_true.shape != y_pred.shape:
+        raise ValueError(f"Shapes of y_true {y_true.shape} and y_pred {y_pred.shape} don't match")
+
+    # Compute metrics
+    if 'mae' in metrics:
+        results['mae'] = float(mean_absolute_error(y_true, y_pred))
+
+    if 'rmse' in metrics:
+        results['rmse'] = float(np.sqrt(mean_squared_error(y_true, y_pred)))
+
+    if 'mse' in metrics:
+        results['mse'] = float(mean_squared_error(y_true, y_pred))
+
+    if 'r2' in metrics:
+        results['r2'] = float(r2_score(y_true, y_pred))
+
+    return results
+
+def compute_multi_target_metrics(y_true, y_pred, metrics=None):
+    """
+    Compute metrics for multi-target regression.
+
+    Args:
+        y_true: True values with shape [n_samples, n_targets]
+        y_pred: Predicted values with shape [n_samples, n_targets]
+        metrics: List of metrics to compute. Defaults to ['mae', 'rmse', 'r2']
+
+    Returns:
+        List of dictionaries with metrics for each target and an 'avg' key with average metrics
+    """
+    if metrics is None:
+        metrics = ['mae', 'rmse', 'r2']
+
+    # Convert to numpy if tensors
+    if isinstance(y_true, torch.Tensor):
+        y_true = y_true.detach().cpu().numpy()
+    if isinstance(y_pred, torch.Tensor):
+        y_pred = y_pred.detach().cpu().numpy()
+
+    # Check shapes
+    if y_true.shape != y_pred.shape:
+        raise ValueError(f"Shapes of y_true {y_true.shape} and y_pred {y_pred.shape} don't match")
+
+    if len(y_true.shape) < 2:
+        # Single target case
+        return {'target_0': compute_regression_metrics(y_true, y_pred, metrics), 'avg': compute_regression_metrics(y_true, y_pred, metrics)}
+
+    num_targets = y_true.shape[1]
+
+    all_metrics = {}
+    avg_metrics = {metric: 0.0 for metric in metrics}
+
+    # Compute metrics for each target
+    for i in range(num_targets):
+        target_metrics = compute_regression_metrics(y_true[:, i], y_pred[:, i], metrics)
+        all_metrics[f'target_{i}'] = target_metrics
+
+        # Accumulate for average
+        for metric in metrics:
+            avg_metrics[metric] += target_metrics[metric]
+
+    # Compute averages
+    for metric in metrics:
+        avg_metrics[metric] /= num_targets
+
+    all_metrics['avg'] = avg_metrics
+
+    return all_metrics
+
+def compute_ensemble_metrics(predictions_list, y_true, metrics=None):
+    """
+    Compute metrics for ensemble predictions.
+
+    Args:
+        predictions_list: List of prediction arrays, each with shape [n_samples, n_targets]
+        y_true: True values with shape [n_samples, n_targets]
+        metrics: List of metrics to compute. Defaults to ['mae', 'rmse', 'r2']
+
+    Returns:
+        Dictionary with metrics for ensemble predictions and individual model metrics
+    """
+    if metrics is None:
+        metrics = ['mae', 'rmse', 'r2']
+
+    # Convert to numpy if tensors
+    if isinstance(y_true, torch.Tensor):
+        y_true = y_true.detach().cpu().numpy()
+
+    predictions_np = []
+    for pred in predictions_list:
+        if isinstance(pred, torch.Tensor):
+            predictions_np.append(pred.detach().cpu().numpy())
+        else:
+            predictions_np.append(pred)
+
+    # Compute ensemble predictions (average)
+    ensemble_pred = np.mean(predictions_np, axis=0)
+
+    # Compute ensemble metrics
+    ensemble_metrics = compute_multi_target_metrics(y_true, ensemble_pred, metrics)
+
+    # Compute individual model metrics
+    individual_metrics = []
+    for i, pred in enumerate(predictions_np):
+        model_metrics = compute_multi_target_metrics(y_true, pred, metrics)
+        individual_metrics.append(model_metrics)
+
+    return {
+        'ensemble': ensemble_metrics,
+        'individual': individual_metrics
+    }
+
+def compute_uncertainty_metrics(predictions, prediction_variances, y_true, metrics=None):
+    """
+    Compute metrics for uncertainty-aware predictions.
+
+    Args:
+        predictions: Mean predictions with shape [n_samples, n_targets]
+        prediction_variances: Prediction variances with shape [n_samples, n_targets]
+        y_true: True values with shape [n_samples, n_targets]
+        metrics: List of metrics to compute. Defaults to ['mae', 'rmse', 'r2', 'nll']
+
+    Returns:
+        Dictionary with uncertainty-aware metrics
+    """
+    if metrics is None:
+        metrics = ['mae', 'rmse', 'r2', 'nll']
+
+    # Convert to numpy if tensors
+    if isinstance(y_true, torch.Tensor):
+        y_true = y_true.detach().cpu().numpy()
+    if isinstance(predictions, torch.Tensor):
+        predictions = predictions.detach().cpu().numpy()
+    if isinstance(prediction_variances, torch.Tensor):
+        prediction_variances = prediction_variances.detach().cpu().numpy()
+
+    # Ensure prediction_variances are positive
+    prediction_variances = np.maximum(prediction_variances, 1e-8)
+
+    # Compute standard metrics
+    standard_metrics = compute_multi_target_metrics(y_true, predictions, ['mae', 'rmse', 'r2'])
+
+    # Compute negative log likelihood (NLL) if requested
+    if 'nll' in metrics:
+        nll = compute_gaussian_nll(y_true, predictions, prediction_variances)
+
+        for target_key in standard_metrics:
+            if target_key != 'avg':
+                standard_metrics[target_key]['nll'] = nll[int(target_key.split('_')[1])]
+
+        standard_metrics['avg']['nll'] = np.mean(list(nll))
+
+    return standard_metrics
+
+def compute_gaussian_nll(y_true, means, variances):
+    """
+    Compute Gaussian negative log likelihood.
+
+    Args:
+        y_true: True values with shape [n_samples, n_targets]
+        means: Predicted means with shape [n_samples, n_targets]
+        variances: Predicted variances with shape [n_samples, n_targets]
+
+    Returns:
+        Array of NLL values for each target
+    """
+    n_targets = y_true.shape[1]
+    nll_values = np.zeros(n_targets)
+
+    for i in range(n_targets):
+        # Ensure variance is positive
+        target_var = np.maximum(variances[:, i], 1e-8)
+
+        # Compute NLL for this target
+        target_nll = 0.5 * np.log(2 * np.pi * target_var) + 0.5 * ((y_true[:, i] - means[:, i])**2) / target_var
+        nll_values[i] = np.mean(target_nll)
+
+    return nll_values

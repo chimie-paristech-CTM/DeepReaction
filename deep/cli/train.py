@@ -459,16 +459,15 @@ def save_fold_data_to_csv(fold_data, fold_idx, output_dir, logger):
                 if len(data_item.y.shape) == 2:
                     for j in range(data_item.y.shape[1]):
                         scaled_value = data_item.y[0, j].item()
-                        record[f'y_{j}_scaled'] = scaled_value
 
+                        # Only save unscaled values
                         if scalers and j < len(scalers):
                             unscaled_value = scalers[j].inverse_transform([[scaled_value]])[0, 0]
                             record[f'y_{j}'] = unscaled_value
                         else:
                             record[f'y_{j}'] = scaled_value
                 else:
-                    record['y_scaled'] = data_item.y.item()
-
+                    # Only save unscaled values
                     if scalers and len(scalers) > 0:
                         unscaled_value = scalers[0].inverse_transform([[data_item.y.item()]])[0, 0]
                         record['y'] = unscaled_value
@@ -487,7 +486,8 @@ def save_fold_data_to_csv(fold_data, fold_idx, output_dir, logger):
 
         if data_records:
             df = pd.DataFrame(data_records)
-            csv_path = os.path.join(fold_dir, f"{split_name}_metadata.csv")
+            # Add fold prefix to CSV filename
+            csv_path = os.path.join(fold_dir, f"fold{fold_idx}_{split_name}_metadata.csv")
             df.to_csv(csv_path, index=False)
             logger.info(f"Saved {split_name} metadata for fold {fold_idx} to {csv_path}")
 

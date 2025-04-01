@@ -1,18 +1,21 @@
 #!/bin/bash
 set -e
 
-PYTHON_ENV="CUDA_VISIBLE_DEVICES=0 python"
+PYTHON_ENV="python"
 SCRIPT_DIR=$(dirname "$(realpath "$0")")
 HYPEROPT_SCRIPT="${SCRIPT_DIR}/deep/cli/hyperopt.py"
 OUTPUT_DIR="${SCRIPT_DIR}/results/hyperopt"
+
+# Disable strict metric checking for Ray Tune
+export TUNE_DISABLE_STRICT_METRIC_CHECKING=1
 
 DATASET="XTB"
 READOUT="mean"
 MODEL_TYPE="dimenet++"
 BATCH_SIZE=32
 NODE_DIM=128
-RANDOM_SEED=42
-EPOCHS=2
+RANDOM_SEED=4223
+EPOCHS=150
 MIN_EPOCHS=0
 EARLY_STOPPING=40
 LR=0.0005
@@ -23,21 +26,22 @@ MIN_LR=0.0000001
 WEIGHT_DECAY=0.0001
 DROPOUT=0.1
 
-# Default values for hyperparameter search
 CUTOFF_VALUES="5.0 10.0 15.0"
 NUM_BLOCKS_VALUES="4 5 6"
+# CUTOFF_VALUES="5.0"
+# NUM_BLOCKS_VALUES="4"
 # PREDICTION_HIDDEN_LAYERS_VALUES="3 4 5"
 # PREDICTION_HIDDEN_DIM_VALUES="128 256 512"
 PREDICTION_HIDDEN_LAYERS_VALUES="3"
 PREDICTION_HIDDEN_DIM_VALUES="128"
-# Cross-validation parameters
+
 CV_FOLDS=5
 CV_TEST_FOLD=-1
 CV_STRATIFY=0
 CV_GROUPED=1
 
 REACTION_ROOT="${SCRIPT_DIR}/dataset/DATASET_DA_F"
-DATASET_CSV="${SCRIPT_DIR}/dataset/DATASET_DA_F/dataset_xtb_goodvibe_updated.csv"
+DATASET_CSV="${SCRIPT_DIR}/dataset/DATASET_DA_F/dataset_xtb_final.csv"
 TARGET_FIELDS=("G(TS)" "DrG")
 TARGET_WEIGHTS=(1.0 1.0)
 REACTANT_SUFFIX="_reactant.xyz"
@@ -45,24 +49,28 @@ TS_SUFFIX="_ts.xyz"
 PRODUCT_SUFFIX="_product.xyz"
 INPUT_FEATURES=("G(TS)_xtb" "DrG_xtb")
 
-# Model parameters (default values that may be overriden)
 HIDDEN_CHANNELS=128
-NUM_BLOCKS=4
 INT_EMB_SIZE=64
 BASIS_EMB_SIZE=8
 OUT_EMB_CHANNELS=256
 NUM_SPHERICAL=7
 NUM_RADIAL=6
-CUTOFF=5.0
 ENVELOPE_EXPONENT=5
 NUM_BEFORE_SKIP=1
 NUM_AFTER_SKIP=2
 NUM_OUTPUT_LAYERS=3
 MAX_NUM_NEIGHBORS=32
-PREDICTION_HIDDEN_LAYERS=3
-PREDICTION_HIDDEN_DIM=128
+# PREDICTION_HIDDEN_LAYERS=3
+# PREDICTION_HIDDEN_DIM=128
 
-# Parse command line arguments
+# Detect GPU count for parallel jobs
+NUM_GPUS=$(nvidia-smi --query-gpu=name --format=csv,noheader 2>/dev/null | wc -l)
+PARALLEL_JOBS=$NUM_GPUS
+if [ $PARALLEL_JOBS -eq 0 ]; then
+    PARALLEL_JOBS=1
+fi
+
+# Process command line arguments
 while [[ $# -gt 0 ]]; do
     key="$1"
     case $key in
@@ -100,6 +108,7 @@ while [[ $# -gt 0 ]]; do
         --num-after-skip) NUM_AFTER_SKIP="$2"; shift 2 ;;
         --num-output-layers) NUM_OUTPUT_LAYERS="$2"; shift 2 ;;
         --max-num-neighbors) MAX_NUM_NEIGHBORS="$2"; shift 2 ;;
+        --parallel-jobs) PARALLEL_JOBS="$2"; shift 2 ;;
         --target-fields)
             TARGET_FIELDS=()
             IFS=' ' read -ra TEMP_FIELDS <<< "$2"
@@ -133,7 +142,7 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-# Validate target fields and weights
+# Validate target fields and weights match
 if [ ${#TARGET_FIELDS[@]} -ne ${#TARGET_WEIGHTS[@]} ]; then
     echo "Error: Number of target fields (${#TARGET_FIELDS[@]}) doesn't match number of target weights (${#TARGET_WEIGHTS[@]})"
     exit 1
@@ -170,15 +179,16 @@ CMD="${CMD} --num_output_layers ${NUM_OUTPUT_LAYERS}"
 CMD="${CMD} --max_num_neighbors ${MAX_NUM_NEIGHBORS}"
 CMD="${CMD} --out_dir ${OUTPUT_DIR}"
 CMD="${CMD} --reaction_dataset_root ${REACTION_ROOT}"
-CMD="${CMD} --dataset_csv \"${DATASET_CSV}\""
+CMD="${CMD} --dataset_csv ${DATASET_CSV}"
 
-# Add hyperparameter search grids
+# Add hyperopt-specific parameters
 CMD="${CMD} --cutoff_values ${CUTOFF_VALUES}"
 CMD="${CMD} --num_blocks_values ${NUM_BLOCKS_VALUES}"
 CMD="${CMD} --prediction_hidden_layers_values ${PREDICTION_HIDDEN_LAYERS_VALUES}"
 CMD="${CMD} --prediction_hidden_dim_values ${PREDICTION_HIDDEN_DIM_VALUES}"
+CMD="${CMD} --parallel_jobs ${PARALLEL_JOBS}"
 
-# Cross-validation parameters
+# Add cross-validation parameters
 CMD="${CMD} --cv_folds ${CV_FOLDS}"
 CMD="${CMD} --cv_test_fold ${CV_TEST_FOLD}"
 if [ ${CV_STRATIFY} -eq 1 ]; then
@@ -196,7 +206,7 @@ if [ ${#TARGET_FIELDS[@]} -gt 0 ]; then
     done
 fi
 
-# Add target weights with proper quoting
+# Add target weights
 if [ ${#TARGET_WEIGHTS[@]} -gt 0 ]; then
     CMD="${CMD} --target_weights"
     for weight in "${TARGET_WEIGHTS[@]}"; do
@@ -204,10 +214,10 @@ if [ ${#TARGET_WEIGHTS[@]} -gt 0 ]; then
     done
 fi
 
-# Handle file suffixes
+# Add file suffixes
 CMD="${CMD} --reaction_file_suffixes \"${REACTANT_SUFFIX}\" \"${TS_SUFFIX}\" \"${PRODUCT_SUFFIX}\""
 
-# Add input features with proper quoting
+# Add input features
 if [ ${#INPUT_FEATURES[@]} -gt 0 ]; then
     CMD="${CMD} --input_features"
     for feature in "${INPUT_FEATURES[@]}"; do
@@ -215,6 +225,7 @@ if [ ${#INPUT_FEATURES[@]} -gt 0 ]; then
     done
 fi
 
+# Add CUDA flag if available
 if [ -n "$CUDA" ]; then
     CMD="${CMD} ${CUDA}"
 elif [ -x "$(command -v nvidia-smi)" ]; then
@@ -223,9 +234,9 @@ else
     CMD="${CMD} --no-cuda"
 fi
 
-# Print the command for debugging
+# Print and execute the command
 echo "Executing command: ${CMD}"
+echo "Using ${PARALLEL_JOBS} parallel jobs (GPUs)"
 
 mkdir -p "${OUTPUT_DIR}"
-# Use bash -c to properly handle the quoted arguments
-bash -c "${CMD}"
+eval ${CMD}

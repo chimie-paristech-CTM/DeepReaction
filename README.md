@@ -18,7 +18,7 @@
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/downloads/)
 
-This repository implements an advanced molecular prediction framework using various readout functions. Our implementation enhances the state-of-the-art performance for predicting reaction datasets.
+This repository implements an advanced chemical reaction prediction framework.  the state-of-the-art performance for predicting reaction energy.
 
 ## Features
 
@@ -33,14 +33,7 @@ This repository implements an advanced molecular prediction framework using vari
 
 ### Benchmark on Reaction Dataset
 
-| Model           | Readout         | MAE   | RMSE  | R²    | #Params | Training Time |
-|:---------------:|:---------------:|:-----:|:-----:|:-----:|:-------:|:------------:|
-| Small | Set Transformer | x.xx  | x.xx  | x.xx  | xx.xM   | xxx min       |
-| Base  | Set Transformer | x.xx  | x.xx  | x.xx  | xx.xM   | xxx min       |
-| Large | Set Transformer | x.xx  | x.xx  | x.xx  | xx.xM   | xxx min       |
-| Base  | Sum             | x.xx  | x.xx  | x.xx  | xx.xM   | xxx min       |
-| Base  | Attention       | x.xx  | x.xx  | x.xx  | xx.xM   | xxx min       |
-
+[Placeholder for performance visualization]
 ### Visualization of Prediction Performance
 [Placeholder for performance visualization]
 
@@ -65,10 +58,10 @@ conda install pytorch==2.5.0 torchvision==0.20.0 torchaudio==2.5.0 -c pytorch
 conda install pyg -c pyg
 
 # Install other dependencies
-pip install -r requirements.txt
+conda env create -f environment.yml
 
 # For Jupyter notebook functionality
-pip install jupyter notebook matplotlib seaborn
+pip install jupyterlab
 ```
 
 ### Dataset Preparation

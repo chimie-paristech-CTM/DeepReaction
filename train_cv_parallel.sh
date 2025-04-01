@@ -1,19 +1,18 @@
 #!/bin/bash
 set -e
 
-PYTHON_ENV="CUDA_VISIBLE_DEVICES=0 python"
+PYTHON_ENV="python"
 SCRIPT_DIR=$(dirname "$(realpath "$0")")
-TRAIN_SCRIPT="${SCRIPT_DIR}/deep/cli/train.py"
-OUTPUT_DIR="${SCRIPT_DIR}/results/xtb_multi"
-
+TRAIN_SCRIPT="${SCRIPT_DIR}/deep/cli/train_cv_parallel.py"
+OUTPUT_DIR="${SCRIPT_DIR}/results/cv_parallel"
 
 DATASET="XTB"
 READOUT="mean"
 MODEL_TYPE="dimenet++"
 BATCH_SIZE=32
 NODE_DIM=128
-RANDOM_SEED=42234
-EPOCHS=200
+RANDOM_SEED=42
+EPOCHS=2
 MIN_EPOCHS=0
 EARLY_STOPPING=40
 LR=0.0005
@@ -24,18 +23,18 @@ MIN_LR=0.0000001
 WEIGHT_DECAY=0.0001
 DROPOUT=0.1
 
-PREDICTION_HIDDEN_LAYERS=4
-PREDICTION_HIDDEN_DIM=512
+PREDICTION_HIDDEN_LAYERS=3
+PREDICTION_HIDDEN_DIM=128
 
 TRAIN_RATIO=0.8
 VAL_RATIO=0.1
 TEST_RATIO=0.1
 
-# # Cross-validation parameters
-# CV_FOLDS=5
-# CV_TEST_FOLD=-1
-# CV_STRATIFY=0
-# CV_GROUPED=1
+# Cross-validation parameters
+CV_FOLDS=5
+CV_TEST_FOLD=-1
+CV_STRATIFY=0
+CV_GROUPED=1
 
 REACTION_ROOT="${SCRIPT_DIR}/dataset/DATASET_DA_F"
 DATASET_CSV="${SCRIPT_DIR}/dataset/DATASET_DA_F/dataset_xtb_final.csv"
@@ -45,10 +44,6 @@ REACTANT_SUFFIX="_reactant.xyz"
 TS_SUFFIX="_ts.xyz"
 PRODUCT_SUFFIX="_product.xyz"
 INPUT_FEATURES=("G(TS)_xtb" "DrG_xtb")
-
-# Default values for separate dataset files (null if not provided)
-# VAL_CSV="${SCRIPT_DIR}/dataset/DATASET_DA_F/dataset_xtb_goodvibe_updated.csv"
-# TEST_CSV="${SCRIPT_DIR}/dataset/DATASET_DA_F/dataset_xtb_goodvibe_updated.csv"
 
 # Model parameters
 HIDDEN_CHANNELS=128
@@ -88,8 +83,6 @@ while [[ $# -gt 0 ]]; do
         -o|--output) OUTPUT_DIR="$2"; shift 2 ;;
         --reaction-root) REACTION_ROOT="$2"; shift 2 ;;
         --dataset-csv) DATASET_CSV="$2"; shift 2 ;;
-        --val-csv) VAL_CSV="$2"; shift 2 ;;
-        --test-csv) TEST_CSV="$2"; shift 2 ;;
         --model-type) MODEL_TYPE="$2"; shift 2 ;;
         --hidden-channels) HIDDEN_CHANNELS="$2"; shift 2 ;;
         --num-blocks) NUM_BLOCKS="$2"; shift 2 ;;
@@ -135,7 +128,6 @@ while [[ $# -gt 0 ]]; do
             done
             shift 2
             ;;
-        --ckpt) CKPT_PATH="$2"; shift 2 ;;
         --cuda) CUDA="--cuda"; shift ;;
         --no-cuda) CUDA="--no-cuda"; shift ;;
         *) echo "Unknown option: $1"; exit 1 ;;
@@ -146,6 +138,12 @@ done
 if [ ${#TARGET_FIELDS[@]} -ne ${#TARGET_WEIGHTS[@]} ]; then
     echo "Error: Number of target fields (${#TARGET_FIELDS[@]}) doesn't match number of target weights (${#TARGET_WEIGHTS[@]})"
     exit 1
+fi
+
+# Detect GPU count
+NUM_GPUS=$(nvidia-smi --query-gpu=name --format=csv,noheader 2>/dev/null | wc -l)
+if [ $NUM_GPUS -eq 0 ]; then
+    echo "Warning: No GPUs detected, will run on CPU only"
 fi
 
 # Build the command
@@ -188,27 +186,18 @@ CMD="${CMD} --num_output_layers ${NUM_OUTPUT_LAYERS}"
 CMD="${CMD} --max_num_neighbors ${MAX_NUM_NEIGHBORS}"
 
 # Cross-validation parameters
-if [ ${CV_FOLDS} -gt 0 ]; then
-    CMD="${CMD} --cv_folds ${CV_FOLDS}"
-    CMD="${CMD} --cv_test_fold ${CV_TEST_FOLD}"
-    if [ ${CV_STRATIFY} -eq 1 ]; then
-        CMD="${CMD} --cv_stratify"
-    fi
-    if [ ${CV_GROUPED} -eq 0 ]; then
-        CMD="${CMD} --no-cv_grouped"
-    fi
-else
-    # Check if using separate validation and test files
-    if [ -n "$VAL_CSV" ] && [ -n "$TEST_CSV" ]; then
-        CMD="${CMD} --val_csv \"${VAL_CSV}\""
-        CMD="${CMD} --test_csv \"${TEST_CSV}\""
-    else
-        # Using single dataset with automatic splitting
-        CMD="${CMD} --train_ratio ${TRAIN_RATIO}"
-        CMD="${CMD} --val_ratio ${VAL_RATIO}"
-        CMD="${CMD} --test_ratio ${TEST_RATIO}"
-    fi
+CMD="${CMD} --cv_folds ${CV_FOLDS}"
+CMD="${CMD} --cv_test_fold ${CV_TEST_FOLD}"
+if [ ${CV_STRATIFY} -eq 1 ]; then
+    CMD="${CMD} --cv_stratify"
 fi
+if [ ${CV_GROUPED} -eq 0 ]; then
+    CMD="${CMD} --no-cv_grouped"
+fi
+
+CMD="${CMD} --train_ratio ${TRAIN_RATIO}"
+CMD="${CMD} --val_ratio ${VAL_RATIO}"
+CMD="${CMD} --test_ratio ${TEST_RATIO}"
 
 CMD="${CMD} --save_best_model --save_predictions"
 
@@ -241,18 +230,16 @@ fi
 
 if [ -n "$CUDA" ]; then
     CMD="${CMD} ${CUDA}"
-elif [ -x "$(command -v nvidia-smi)" ]; then
+elif [ $NUM_GPUS -gt 0 ]; then
     CMD="${CMD} --cuda"
 else
     CMD="${CMD} --no-cuda"
 fi
 
-if [ -n "$CKPT_PATH" ]; then
-    CMD="${CMD} --ckpt_path \"${CKPT_PATH}\""
-fi
-
 # Print the command for debugging
 echo "Executing command: ${CMD}"
+echo "Available GPUs: ${NUM_GPUS}"
+echo "Number of folds: ${CV_FOLDS}"
 
 mkdir -p "${OUTPUT_DIR}"
 # Use bash -c to properly handle the quoted arguments

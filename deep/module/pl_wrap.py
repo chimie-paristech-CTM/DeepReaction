@@ -9,45 +9,47 @@ from collections import defaultdict
 from torch_geometric.utils import to_dense_batch
 import sys
 from pathlib import Path
+
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from model.model import MoleculePredictionModel
 from utils.metrics import compute_regression_metrics
 
+
 class Estimator(pl.LightningModule):
     def __init__(
-        self,
-        model_type: str,
-        readout: str,
-        batch_size: int,
-        lr: float,
-        max_num_atoms_in_mol: int,
-        scaler=None,
-        use_layer_norm: bool = False,
-        node_latent_dim: int = 128,
-        edge_latent_dim: int = None,
-        dropout: float = 0.0,
-        model_kwargs: Optional[Dict[str, Any]] = None,
-        readout_kwargs: Optional[Dict[str, Any]] = None,
-        optimizer: str = 'adam',
-        weight_decay: float = 0.0,
-        scheduler: str = 'cosine',
-        scheduler_patience: int = 10,
-        scheduler_factor: float = 0.5,
-        warmup_epochs: int = 0,
-        min_lr: float = 1e-6,
-        loss_function: str = 'mse',
-        target_weights: List[float] = None,
-        uncertainty_method: str = None,
-        gradient_clip_val: float = 0.0,
-        monitor_loss: str = 'val_total_loss',
-        name: str = None,
-        use_xtb_features: bool = True,
-        num_xtb_features: int = 2,
-        prediction_hidden_layers: int = 3,
-        prediction_hidden_dim: int = 128,
-        target_field_names: List[str] = None,
-        **kwargs
+            self,
+            model_type: str,
+            readout: str,
+            batch_size: int,
+            lr: float,
+            max_num_atoms_in_mol: int,
+            scaler=None,
+            use_layer_norm: bool = False,
+            node_latent_dim: int = 128,
+            edge_latent_dim: int = None,
+            dropout: float = 0.0,
+            model_kwargs: Optional[Dict[str, Any]] = None,
+            readout_kwargs: Optional[Dict[str, Any]] = None,
+            optimizer: str = 'adam',
+            weight_decay: float = 0.0,
+            scheduler: str = 'cosine',
+            scheduler_patience: int = 10,
+            scheduler_factor: float = 0.5,
+            warmup_epochs: int = 0,
+            min_lr: float = 1e-6,
+            loss_function: str = 'mse',
+            target_weights: List[float] = None,
+            uncertainty_method: str = None,
+            gradient_clip_val: float = 0.0,
+            monitor_loss: str = 'val_total_loss',
+            name: str = None,
+            use_xtb_features: bool = True,
+            num_xtb_features: int = 2,
+            prediction_hidden_layers: int = 3,
+            prediction_hidden_dim: int = 128,
+            target_field_names: List[str] = None,
+            **kwargs
     ):
         super().__init__()
         self.save_hyperparameters()
@@ -255,12 +257,14 @@ class Estimator(pl.LightningModule):
 
     def training_step(self, batch, batch_idx):
         train_total_loss = self._step(batch, 'train')
-        self.log('train_total_loss', train_total_loss, batch_size=self.batch_size, on_step=True, on_epoch=True, prog_bar=True)
+        self.log('train_total_loss', train_total_loss, batch_size=self.batch_size, on_step=True, on_epoch=True,
+                 prog_bar=True)
         return train_total_loss
 
     def validation_step(self, batch, batch_idx):
         val_total_loss = self._step(batch, 'valid')
-        self.log('val_total_loss', val_total_loss, batch_size=self.batch_size, on_step=True, on_epoch=True, prog_bar=True)
+        self.log('val_total_loss', val_total_loss, batch_size=self.batch_size, on_step=True, on_epoch=True,
+                 prog_bar=True)
         return val_total_loss
 
     def test_step(self, batch, batch_idx):
@@ -293,7 +297,8 @@ class Estimator(pl.LightningModule):
             metrics_dict = compute_regression_metrics(y_true_target, y_pred_target, metrics=['mae', 'rmse', 'r2'])
 
             # Get target name
-            target_name = self.target_field_names[i] if self.target_field_names and i < len(self.target_field_names) else f"Target {i}"
+            target_name = self.target_field_names[i] if self.target_field_names and i < len(
+                self.target_field_names) else f"Target {i}"
 
             # Store metrics
             target_metrics[f"target_{i}"] = metrics_dict
@@ -321,10 +326,43 @@ class Estimator(pl.LightningModule):
             self.train_metrics[self.current_epoch] = train_metrics
             del self.train_output[self.current_epoch]
 
+    # def on_validation_epoch_end(self):
+    #     if self.current_epoch in self.val_output and len(self.val_output[self.current_epoch]) > 0:
+    #         val_metrics, y_pred, y_true = self._epoch_end_report(self.val_output[self.current_epoch], epoch_type='Validation')
+    #         self.val_metrics[self.current_epoch] = val_metrics
+    #         self.val_true[self.current_epoch] = y_true
+    #         del self.val_output[self.current_epoch]
+
     def on_validation_epoch_end(self):
         if self.current_epoch in self.val_output and len(self.val_output[self.current_epoch]) > 0:
-            val_metrics, y_pred, y_true = self._epoch_end_report(self.val_output[self.current_epoch], epoch_type='Validation')
+            val_metrics, y_pred, y_true = self._epoch_end_report(self.val_output[self.current_epoch],
+                                                                 epoch_type='Validation')
             self.val_metrics[self.current_epoch] = val_metrics
+
+            # Store metrics in a more accessible format for hyperopt
+            if 'target_0' in val_metrics:
+                for target_idx, target_data in val_metrics.items():
+                    if isinstance(target_data, dict) and 'mae' in target_data:
+                        # Store direct metrics for easier retrieval
+                        self.val_metrics[f'val_mae'] = target_data.get('mae', float('inf'))
+                        self.val_metrics[f'val_rmse'] = target_data.get('rmse', float('inf'))
+                        self.val_metrics[f'val_r2'] = target_data.get('r2', 0.0)
+                        break  # Just use the first target's metrics for now
+            else:
+                # If no target-specific metrics, use average metrics directly
+                avg_mae = np.mean([m[0] for m in self.all_metrics]) if hasattr(self,
+                                                                               'all_metrics') and self.all_metrics else float(
+                    'inf')
+                avg_rmse = np.mean([m[1] for m in self.all_metrics]) if hasattr(self,
+                                                                                'all_metrics') and self.all_metrics else float(
+                    'inf')
+                avg_r2 = np.mean([m[2] for m in self.all_metrics]) if hasattr(self,
+                                                                              'all_metrics') and self.all_metrics else 0.0
+
+                self.val_metrics['val_mae'] = avg_mae
+                self.val_metrics['val_rmse'] = avg_rmse
+                self.val_metrics['val_r2'] = avg_r2
+
             self.val_true[self.current_epoch] = y_true
             del self.val_output[self.current_epoch]
 
