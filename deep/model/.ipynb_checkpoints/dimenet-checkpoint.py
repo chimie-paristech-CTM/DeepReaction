@@ -1,4 +1,4 @@
-# Copied from PyTorch Geometric source files. We needed to change what the
+# Copied from PyTorch Geometric results files. We needed to change what the
 # forward function of the DimeNet class returns to allow other types of
 # readouts
 

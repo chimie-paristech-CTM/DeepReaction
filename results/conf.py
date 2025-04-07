@@ -43,8 +43,8 @@ templates_path = ['_templates']
 # Usually you set "language" from the command line for these cases.
 language = 'Python'
 
-# List of patterns, relative to source directory, that match files and
-# directories to ignore when looking for source files.
+# List of patterns, relative to results directory, that match files and
+# directories to ignore when looking for results files.
 # This pattern also affects html_static_path and html_extra_path.
 exclude_patterns = []
 

@@ -439,6 +439,9 @@ def evaluate_model(
 
 
 def save_fold_data_to_csv(fold_data, fold_idx, output_dir, logger):
+    csv_dir = os.path.join(os.path.dirname(output_dir), "csv_files")
+    os.makedirs(csv_dir, exist_ok=True)
+
     fold_dir = os.path.join(output_dir, f"fold_{fold_idx}")
     os.makedirs(fold_dir, exist_ok=True)
 
@@ -449,47 +452,115 @@ def save_fold_data_to_csv(fold_data, fold_idx, output_dir, logger):
 
         data_records = []
         for i, data_item in enumerate(dataset):
-            record = {'index': i}
+            record = {}
 
-            for attr in ['reaction_id', 'id', 'reaction']:
-                if hasattr(data_item, attr):
-                    record[attr] = getattr(data_item, attr)
+            if hasattr(data_item, 'reaction_id'):
+                record['ID'] = getattr(data_item, 'reaction_id')
+            else:
+                record['ID'] = f"ID{i}"
+
+            record['R'] = f"R{i}"
+
+            if hasattr(data_item, 'id'):
+                record['R_dir'] = getattr(data_item, 'id')
+            else:
+                record['R_dir'] = f"reaction_R{i}"
+
+            if hasattr(data_item, 'reaction'):
+                record['reaction'] = getattr(data_item, 'reaction')
+            else:
+                record['reaction'] = ""
 
             if hasattr(data_item, 'y'):
                 if len(data_item.y.shape) == 2:
+                    targets = []
                     for j in range(data_item.y.shape[1]):
                         scaled_value = data_item.y[0, j].item()
 
-                        # Only save unscaled values
                         if scalers and j < len(scalers):
                             unscaled_value = scalers[j].inverse_transform([[scaled_value]])[0, 0]
-                            record[f'y_{j}'] = unscaled_value
+                            value = unscaled_value
                         else:
-                            record[f'y_{j}'] = scaled_value
+                            value = scaled_value
+
+                        targets.append(value)
+
+                    if len(targets) >= 1:
+                        record['G(TS)'] = targets[0]
+                    else:
+                        record['G(TS)'] = 0.0
+
+                    if len(targets) >= 2:
+                        record['DrG'] = targets[1]
+                    else:
+                        record['DrG'] = 0.0
+
                 else:
-                    # Only save unscaled values
                     if scalers and len(scalers) > 0:
                         unscaled_value = scalers[0].inverse_transform([[data_item.y.item()]])[0, 0]
-                        record['y'] = unscaled_value
+                        value = unscaled_value
                     else:
-                        record['y'] = data_item.y.item()
+                        value = data_item.y.item()
+
+                    record['G(TS)'] = value
+                    record['DrG'] = 0.0
+
+            else:
+                record['G(TS)'] = 0.0
+                record['DrG'] = 0.0
 
             if hasattr(data_item, 'xtb_features'):
                 for j in range(data_item.xtb_features.shape[1]):
-                    feature_name = f'feature_{j}'
-                    if hasattr(data_item, 'feature_names') and j < len(data_item.feature_names):
-                        feature_name = data_item.feature_names[j]
+                    scaled_feature_value = data_item.xtb_features[0, j].item()
 
-                    record[feature_name] = data_item.xtb_features[0, j].item()
+                    # Apply inverse scaling using the same scalers as for y values
+                    if scalers and j < len(scalers):
+                        unscaled_feature_value = scalers[j].inverse_transform([[scaled_feature_value]])[0, 0]
+                        feature_value = unscaled_feature_value
+                    else:
+                        feature_value = scaled_feature_value
+
+                    if j == 0:
+                        record['G(TS)_xtb'] = feature_value
+                    elif j == 1:
+                        record['DrG_xtb'] = feature_value
+            else:
+                record['G(TS)_xtb'] = 0.0
+                record['DrG_xtb'] = 0.0
 
             data_records.append(record)
 
         if data_records:
             df = pd.DataFrame(data_records)
-            # Add fold prefix to CSV filename
-            csv_path = os.path.join(fold_dir, f"fold{fold_idx}_{split_name}_metadata.csv")
+
+            required_columns = ['ID', 'R', 'R_dir', 'reaction', 'G(TS)', 'DrG', 'G(TS)_xtb', 'DrG_xtb']
+            for col in required_columns:
+                if col not in df.columns:
+                    df[col] = 0.0
+
+            df = df[required_columns]
+
+            csv_path = os.path.join(csv_dir, f"fold{fold_idx}_{split_name}.csv")
             df.to_csv(csv_path, index=False)
             logger.info(f"Saved {split_name} metadata for fold {fold_idx} to {csv_path}")
+
+            fold_csv_path = os.path.join(fold_dir, f"fold{fold_idx}_{split_name}_metadata.csv")
+            df.to_csv(fold_csv_path, index=False)
+
+            if fold_idx == 0:
+                symlink_path = os.path.join(csv_dir, f"{split_name}.csv")
+                rel_path = os.path.relpath(csv_path, csv_dir)
+
+                if os.path.islink(symlink_path):
+                    os.unlink(symlink_path)
+
+                try:
+                    os.symlink(rel_path, symlink_path)
+                    logger.info(f"Created symlink {symlink_path} -> {rel_path}")
+                except (OSError, NotImplementedError) as e:
+                    import shutil
+                    shutil.copy2(csv_path, symlink_path)
+                    logger.info(f"Copied {csv_path} to {symlink_path}")
 
 
 def run_fold(fold_idx, fold_data, args, logger):
