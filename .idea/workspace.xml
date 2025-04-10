@@ -5,21 +5,9 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="94731d45-201e-4dbc-a4e7-9a36e7716e22" name="更改" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/vcs.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/deep/cli/bayesopt.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/hyperopt_bayes.sh" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/build/html/_static/jquery-3.6.0.js" beforeDir="false" afterPath="$PROJECT_DIR$/build/html/_static/jquery-3.6.0.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/build/html/_static/underscore-1.13.1.js" beforeDir="false" afterPath="$PROJECT_DIR$/build/html/_static/underscore-1.13.1.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/deep/cli/inference.py" beforeDir="false" afterPath="$PROJECT_DIR$/deep/cli/inference.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/deep/cli/train.py" beforeDir="false" afterPath="$PROJECT_DIR$/deep/cli/train.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/deep/model/.ipynb_checkpoints/dimenet-checkpoint.py" beforeDir="false" afterPath="$PROJECT_DIR$/deep/model/.ipynb_checkpoints/dimenet-checkpoint.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/build/html/_static/jquery-3.6.0.js" beforeDir="false" afterPath="$PROJECT_DIR$/docs/build/html/_static/jquery-3.6.0.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/build/html/_static/underscore-1.13.1.js" beforeDir="false" afterPath="$PROJECT_DIR$/docs/build/html/_static/underscore-1.13.1.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/source/conf.py" beforeDir="false" afterPath="$PROJECT_DIR$/docs/source/conf.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/inference.sh" beforeDir="false" afterPath="$PROJECT_DIR$/inference.sh" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/source/conf.py" beforeDir="false" afterPath="$PROJECT_DIR$/results/conf.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/source/index.rst" beforeDir="false" afterPath="$PROJECT_DIR$/results/index.rst" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/source/predictions.csv" beforeDir="false" afterPath="$PROJECT_DIR$/results/predictions.csv" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/source/xtb_multi.zip" beforeDir="false" afterPath="$PROJECT_DIR$/results/xtb_multi.zip" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -118,7 +106,13 @@
       <workItem from="1743438261078" duration="295000" />
       <workItem from="1743493590966" duration="3126000" />
       <workItem from="1743508936130" duration="312000" />
-      <workItem from="1744018494227" duration="676000" />
+      <workItem from="1744018494227" duration="1978000" />
+      <workItem from="1744108441574" duration="3324000" />
+      <workItem from="1744165778465" duration="590000" />
+      <workItem from="1744192140213" duration="585000" />
+      <workItem from="1744207579768" duration="594000" />
+      <workItem from="1744215854847" duration="593000" />
+      <workItem from="1744271182357" duration="738000" />
     </task>
     <servers />
   </component>
