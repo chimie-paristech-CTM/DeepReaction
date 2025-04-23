@@ -1,19 +1,8 @@
-from .activations import swish
-from .model import MoleculeModel, MoleculePredictionModel
+from .base import BaseReactionModel
+from .factory import ModelRegistry, ModelFactory, create_model
 from .dimenetplusplus import DimeNetPlusPlus
-from .dimenet import DimeNet
-from .head import MLPHead
-from .mlp import PredictionMLP
-from .readout import SumReadout, MaxReadout, MeanReadout, SetTransformerReadout
-__all__ = ['swish',
-           'MoleculePredictionModel',
-           'MoleculeModel',
-           'DimeNetPlusPlus',
-           'DimeNet',
-           'MLPHead',
-           'PredictionMLP',
-           'SetTransformerReadout',
-           'SumReadout',
-           'MaxReadout',
-           'MeanReadout',
-           ]
+from .model import MoleculePredictionModel
+from .readout import ReadoutFactory
+
+
+__all__ = ['create_model', 'DimeNetPlusPlus', 'MoleculePredictionModel']

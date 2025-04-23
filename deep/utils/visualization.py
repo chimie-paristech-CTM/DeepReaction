@@ -878,7 +878,7 @@ from typing import Dict, List, Union, Optional, Tuple, Any
 def plot_predictions(y_true, y_pred, output_dir, save_format='png'):
     """
     Plot prediction results for single-target models.
-
+    
     Args:
         y_true: Dictionary of true values by epoch
         y_pred: Dictionary of predicted values by epoch
@@ -886,46 +886,46 @@ def plot_predictions(y_true, y_pred, output_dir, save_format='png'):
         save_format: Format to save the plots (png, pdf, etc.)
     """
     os.makedirs(output_dir, exist_ok=True)
-
+    
     for epoch in y_pred.keys():
         if epoch not in y_true:
             continue
-
+        
         predictions = y_pred[epoch]
         truths = y_true[epoch]
-
+        
         if len(predictions.shape) > 1:
             # If multi-target, use only the first target for this function
             predictions = predictions[:, 0]
             truths = truths[:, 0]
-
+        
         fig, ax = plt.subplots(figsize=(10, 8))
-
+        
         # Calculate metrics
         r2 = r2_score(truths, predictions)
         rmse = np.sqrt(mean_squared_error(truths, predictions))
         mae = mean_absolute_error(truths, predictions)
-
+        
         # Scatter plot of predictions vs actual
         ax.scatter(truths, predictions, alpha=0.5)
-
+        
         # Add diagonal line (perfect prediction)
         min_val = min(truths.min(), predictions.min())
         max_val = max(truths.max(), predictions.max())
         margin = (max_val - min_val) * 0.1
-        ax.plot([min_val - margin, max_val + margin],
-                [min_val - margin, max_val + margin],
+        ax.plot([min_val - margin, max_val + margin], 
+                [min_val - margin, max_val + margin], 
                 'r--', label='Ideal')
-
+        
         ax.set_xlabel('True Values')
         ax.set_ylabel('Predicted Values')
         ax.set_title(f'Predictions vs True Values (Epoch {epoch})\nR² = {r2:.4f}, RMSE = {rmse:.4f}, MAE = {mae:.4f}')
         ax.legend()
         ax.grid(True, alpha=0.3)
-
+        
         # Add equal aspect ratio
         ax.set_aspect('equal')
-
+        
         # Save plot
         fig.tight_layout()
         plt.savefig(os.path.join(output_dir, f'predictions_epoch_{epoch}.{save_format}'), dpi=300)
@@ -934,7 +934,7 @@ def plot_predictions(y_true, y_pred, output_dir, save_format='png'):
 def plot_multi_target_predictions(y_true, y_pred, target_names, output_dir, save_format='png'):
     """
     Plot prediction results for multi-target models.
-
+    
     Args:
         y_true: Dictionary of true values by epoch
         y_pred: Dictionary of predicted values by epoch
@@ -943,68 +943,68 @@ def plot_multi_target_predictions(y_true, y_pred, target_names, output_dir, save
         save_format: Format to save the plots (png, pdf, etc.)
     """
     os.makedirs(output_dir, exist_ok=True)
-
+    
     for epoch in y_pred.keys():
         if epoch not in y_true:
             continue
-
+        
         predictions = y_pred[epoch]
         truths = y_true[epoch]
-
+        
         num_targets = predictions.shape[1]
-
+        
         # Set up the figure with a grid of subplots
         fig = plt.figure(figsize=(15, 10))
-
+        
         # Determine grid layout - try to make it close to square
         if num_targets <= 2:
             nrows, ncols = 1, num_targets
         else:
             ncols = int(np.ceil(np.sqrt(num_targets)))
             nrows = int(np.ceil(num_targets / ncols))
-
+        
         gs = GridSpec(nrows, ncols, figure=fig)
-
+        
         # Generate a subplot for each target
         for i in range(num_targets):
             ax = fig.add_subplot(gs[i // ncols, i % ncols])
-
+            
             target_pred = predictions[:, i]
             target_true = truths[:, i]
-
+            
             # Calculate metrics
             r2 = r2_score(target_true, target_pred)
             rmse = np.sqrt(mean_squared_error(target_true, target_pred))
             mae = mean_absolute_error(target_true, target_pred)
-
+            
             # Scatter plot of predictions vs actual
             ax.scatter(target_true, target_pred, alpha=0.5)
-
+            
             # Add diagonal line (perfect prediction)
             min_val = min(target_true.min(), target_pred.min())
             max_val = max(target_true.max(), target_pred.max())
             margin = (max_val - min_val) * 0.1
-            ax.plot([min_val - margin, max_val + margin],
-                    [min_val - margin, max_val + margin],
+            ax.plot([min_val - margin, max_val + margin], 
+                    [min_val - margin, max_val + margin], 
                     'r--', label='Ideal')
-
+            
             target_label = target_names[i] if i < len(target_names) else f"Target {i}"
             ax.set_xlabel('True Values')
             ax.set_ylabel('Predicted Values')
             ax.set_title(f'{target_label}\nR² = {r2:.4f}, RMSE = {rmse:.4f}, MAE = {mae:.4f}')
-
+            
             if i == 0:  # Only add legend to first subplot
                 ax.legend()
-
+            
             ax.grid(True, alpha=0.3)
-
+            
             # Add equal aspect ratio
             ax.set_aspect('equal')
-
+        
         # Adjust spacing
         plt.suptitle(f'Multi-Target Predictions (Epoch {epoch})', fontsize=16)
         plt.tight_layout(rect=[0, 0, 1, 0.96])  # Make room for suptitle
-
+        
         # Save plot
         plt.savefig(os.path.join(output_dir, f'multi_target_predictions_epoch_{epoch}.{save_format}'), dpi=300)
         plt.close(fig)
@@ -1012,30 +1012,30 @@ def plot_multi_target_predictions(y_true, y_pred, target_names, output_dir, save
 def plot_training_curves(metrics_file, output_dir, save_format='png'):
     """
     Plot training and validation curves from a CSV metrics file.
-
+    
     Args:
         metrics_file: Path to the CSV file with metrics
         output_dir: Directory to save the plots
         save_format: Format to save the plots (png, pdf, etc.)
     """
     os.makedirs(output_dir, exist_ok=True)
-
+    
     try:
         metrics_df = pd.read_csv(metrics_file)
     except Exception as e:
         print(f"Error loading metrics file: {e}")
         return
-
+    
     # Extract epoch information
     if 'epoch' in metrics_df.columns:
         epochs = metrics_df['epoch'].values
     else:
         epochs = np.arange(len(metrics_df))
-
+    
     # Find train and validation metrics columns
     train_cols = [col for col in metrics_df.columns if col.startswith('train_') and 'loss' in col]
     val_cols = [col for col in metrics_df.columns if col.startswith('val_') or col.startswith('valid_')]
-
+    
     # Create loss plot
     if 'train_loss' in metrics_df.columns and 'val_loss' in metrics_df.columns:
         fig, ax = plt.subplots(figsize=(10, 6))
@@ -1049,29 +1049,29 @@ def plot_training_curves(metrics_file, output_dir, save_format='png'):
         fig.tight_layout()
         plt.savefig(os.path.join(output_dir, f'loss_curve.{save_format}'), dpi=300)
         plt.close(fig)
-
+    
     # Create separate plots for each metric type (MAE, RMSE, R2)
     metric_types = ['MAE', 'RMSE', 'R2']
-
+    
     for metric in metric_types:
         train_metric_cols = [col for col in metrics_df.columns if col.startswith('Train') and metric in col]
         val_metric_cols = [col for col in metrics_df.columns if col.startswith('Validation') and metric in col]
-
+        
         if not train_metric_cols and not val_metric_cols:
             continue
-
+        
         fig, ax = plt.subplots(figsize=(10, 6))
-
+        
         for col in train_metric_cols:
             target_idx = col.split('Target')[-1].strip() if 'Target' in col else ''
             label = f'Train {metric} {target_idx}'.strip()
             ax.plot(epochs, metrics_df[col], label=label)
-
+        
         for col in val_metric_cols:
             target_idx = col.split('Target')[-1].strip() if 'Target' in col else ''
             label = f'Validation {metric} {target_idx}'.strip()
             ax.plot(epochs, metrics_df[col], label=label, linestyle='--')
-
+        
         ax.set_xlabel('Epoch')
         ax.set_ylabel(metric)
         ax.set_title(f'Training and Validation {metric}')
@@ -1084,7 +1084,7 @@ def plot_training_curves(metrics_file, output_dir, save_format='png'):
 def plot_correlation_matrix(predictions, target_names, output_dir, save_format='png'):
     """
     Plot correlation matrix between predicted targets.
-
+    
     Args:
         predictions: Array of predictions with shape [n_samples, n_targets]
         target_names: List of target field names
@@ -1092,38 +1092,38 @@ def plot_correlation_matrix(predictions, target_names, output_dir, save_format='
         save_format: Format to save the plots (png, pdf, etc.)
     """
     os.makedirs(output_dir, exist_ok=True)
-
+    
     if len(predictions.shape) < 2 or predictions.shape[1] <= 1:
         return  # Skip if not multi-target
-
+    
     # Calculate correlation matrix
     corr_matrix = np.corrcoef(predictions.T)
-
+    
     # Create heatmap
     fig, ax = plt.subplots(figsize=(10, 8))
     im = ax.imshow(corr_matrix, cmap='coolwarm', vmin=-1, vmax=1)
-
+    
     # Add colorbar
     plt.colorbar(im, ax=ax)
-
+    
     # Add labels
     ax.set_xticks(np.arange(len(target_names)))
     ax.set_yticks(np.arange(len(target_names)))
     ax.set_xticklabels(target_names)
     ax.set_yticklabels(target_names)
-
+    
     # Rotate x tick labels
     plt.setp(ax.get_xticklabels(), rotation=45, ha="right", rotation_mode="anchor")
-
+    
     # Add text annotations
     for i in range(len(target_names)):
         for j in range(len(target_names)):
             text = ax.text(j, i, f"{corr_matrix[i, j]:.2f}",
-                           ha="center", va="center",
+                           ha="center", va="center", 
                            color="white" if abs(corr_matrix[i, j]) > 0.5 else "black")
-
+    
     ax.set_title("Target Correlation Matrix")
     fig.tight_layout()
-
+    
     plt.savefig(os.path.join(output_dir, f'target_correlation_matrix.{save_format}'), dpi=300)
     plt.close(fig)

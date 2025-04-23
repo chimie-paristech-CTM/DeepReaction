@@ -5,9 +5,110 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="94731d45-201e-4dbc-a4e7-9a36e7716e22" name="更改" comment="">
-      <change afterPath="$PROJECT_DIR$/deep/cli/bayesopt.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/hyperopt_bayes.sh" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/deep/config/__init__.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/deep/config/config.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/deep/core/predictor.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/deep/core/trainer.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/deep/data/dataset.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/deep/model/base.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/deep/model/factory.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/example/hyper_grid.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/example/predict_reaction.ipynb" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/example/predict_reaction.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/example/train_reaction.ipynb" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/example/train_reaction.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/example/train_reaction_cv.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/example/train_reaction_cv_gpu.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/test/hyper_grid.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/test/predict_reaction.ipynb" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/test/predict_reaction.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/test/train_reaction.ipynb" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/test/train_reaction.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/test/train_reaction_cv.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/test/train_reaction_cv_gpu.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/deep/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/deep/__init__.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/deep/cli/.ipynb_checkpoints/__init__-checkpoint.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/deep/cli/.ipynb_checkpoints/config-checkpoint.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/deep/cli/.ipynb_checkpoints/finetune-checkpoint.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/deep/cli/.ipynb_checkpoints/hyperopt-checkpoint.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/deep/cli/.ipynb_checkpoints/inference-checkpoint.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/deep/cli/.ipynb_checkpoints/train-checkpoint.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/deep/core/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/deep/core/__init__.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/deep/data/.ipynb_checkpoints/PygReaction-checkpoint.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/deep/data/.ipynb_checkpoints/__init__-checkpoint.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/deep/data/.ipynb_checkpoints/load_MD17-checkpoint.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/deep/data/.ipynb_checkpoints/load_QM7-checkpoint.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/deep/data/.ipynb_checkpoints/load_QM8-checkpoint.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/deep/data/.ipynb_checkpoints/load_QM9-checkpoint.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/deep/data/.ipynb_checkpoints/load_QMugs-checkpoint.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/deep/data/.ipynb_checkpoints/load_Reaction-checkpoint.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/deep/data/.ipynb_checkpoints/loading_utils-checkpoint.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/deep/data/PygReaction.py" beforeDir="false" afterPath="$PROJECT_DIR$/deep/data/PygReaction.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/deep/data/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/deep/data/__init__.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/deep/data/load_Reaction.py" beforeDir="false" afterPath="$PROJECT_DIR$/deep/data/load_Reaction.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/deep/model/.ipynb_checkpoints/__init__-checkpoint.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/deep/model/.ipynb_checkpoints/activations-checkpoint.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/deep/model/.ipynb_checkpoints/dimenet-checkpoint.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/deep/model/.ipynb_checkpoints/dimenetplusplus-checkpoint.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/deep/model/.ipynb_checkpoints/head-checkpoint.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/deep/model/.ipynb_checkpoints/mlp-checkpoint.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/deep/model/.ipynb_checkpoints/model-checkpoint.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/deep/model/.ipynb_checkpoints/readout-checkpoint.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/deep/model/.ipynb_checkpoints/reporting-checkpoint.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/deep/model/.ipynb_checkpoints/set_transformer_models-checkpoint.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/deep/model/.ipynb_checkpoints/set_transformer_modules-checkpoint.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/deep/model/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/deep/model/__init__.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/deep/model/activations.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/deep/model/dimenetplusplus.py" beforeDir="false" afterPath="$PROJECT_DIR$/deep/model/dimenetplusplus.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/deep/model/head.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/deep/model/mlp.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/deep/model/model.py" beforeDir="false" afterPath="$PROJECT_DIR$/deep/model/model.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/deep/model/model_factory.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/deep/model/readout.py" beforeDir="false" afterPath="$PROJECT_DIR$/deep/model/readout.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/deep/model/reporting.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/deep/model/set_transformer_models.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/deep/model/set_transformer_modules.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/deep/module/.ipynb_checkpoints/__init__-checkpoint.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/deep/module/.ipynb_checkpoints/pl_wrap-checkpoint.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/deep/module/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/deep/module/__init__.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/deep/module/pl_wrap.py" beforeDir="false" afterPath="$PROJECT_DIR$/deep/module/pl_wrap.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/deep/utils/.ipynb_checkpoints/__init__-checkpoint.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/deep/utils/.ipynb_checkpoints/metrics-checkpoint.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/deep/utils/.ipynb_checkpoints/model_utils-checkpoint.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/deep/utils/.ipynb_checkpoints/visualization-checkpoint.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/deep/utils/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/deep/utils/__init__.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/deep/utils/metrics.py" beforeDir="false" afterPath="$PROJECT_DIR$/deep/utils/metrics.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/deep/utils/model_utils.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/deep/utils/visualization.py" beforeDir="false" afterPath="$PROJECT_DIR$/deep/utils/visualization.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/environment.yml" beforeDir="false" afterPath="$PROJECT_DIR$/environment.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/example/.ipynb_checkpoints/train_demo-checkpoint.ipynb" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/example/finetune.sh" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/example/finetune_full.sh" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/example/finetune_lowlr.sh" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/example/hyperopt.sh" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/example/inference.sh" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/example/train.sh" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/example/train_demo.ipynb" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/hyperopt.sh" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/hyperopt_bayes.sh" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/inference.sh" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/results/conf.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/results/index.rst" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/results/predictions.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/results/xtb_multi.zip" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/test/finetune.sh" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/test/finetune_full.sh" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/test/finetune_lowlr.sh" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/test/hyperopt.sh" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/test/inference.sh" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/test/train.sh" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/test/train_demo.ipynb" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/train.sh" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/train_cv_parallel.sh" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/train_demo.ipynb" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/train_single.sh" beforeDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -35,27 +136,28 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;RunOnceActivity.OpenProjectViewOnStart&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
-    &quot;last_opened_file_path&quot;: &quot;/Users/user/Documents/GitHub/deepreaction/deep/cli&quot;,
-    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
-    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
-    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
-    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
-    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
-    &quot;settings.editor.selected.configurable&quot;: &quot;advanced.settings&quot;,
-    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "RunOnceActivity.OpenProjectViewOnStart": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "git-widget-placeholder": "main",
+    "last_opened_file_path": "/Users/user/Documents/GitHub/DeepReaction/deep/utils",
+    "node.js.detected.package.eslint": "true",
+    "node.js.detected.package.tslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "node.js.selected.package.tslint": "(autodetect)",
+    "nodejs_package_manager_path": "npm",
+    "settings.editor.selected.configurable": "advanced.settings",
+    "vue.rearranger.settings.migration": "true"
   }
-}</component>
+}]]></component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
-      <recent name="$PROJECT_DIR$/deep/cli" />
-      <recent name="$PROJECT_DIR$" />
-      <recent name="$PROJECT_DIR$/example" />
-      <recent name="$PROJECT_DIR$/test" />
+      <recent name="$PROJECT_DIR$/deep/utils" />
+      <recent name="$PROJECT_DIR$/deep/model" />
+      <recent name="$PROJECT_DIR$/deep/module" />
+      <recent name="$PROJECT_DIR$/deep/data" />
+      <recent name="$PROJECT_DIR$/deep/core" />
     </key>
     <key name="MoveFile.RECENT_KEYS">
       <recent name="$PROJECT_DIR$" />
@@ -112,7 +214,17 @@
       <workItem from="1744192140213" duration="585000" />
       <workItem from="1744207579768" duration="594000" />
       <workItem from="1744215854847" duration="593000" />
-      <workItem from="1744271182357" duration="738000" />
+      <workItem from="1744271182357" duration="1286000" />
+      <workItem from="1744304753717" duration="605000" />
+      <workItem from="1744363562352" duration="592000" />
+      <workItem from="1744367074269" duration="457000" />
+      <workItem from="1744367585412" duration="183000" />
+      <workItem from="1744374259368" duration="634000" />
+      <workItem from="1744729047667" duration="1370000" />
+      <workItem from="1744751495273" duration="598000" />
+      <workItem from="1744795457159" duration="1197000" />
+      <workItem from="1744880027189" duration="1229000" />
+      <workItem from="1745419735538" duration="2537000" />
     </task>
     <servers />
   </component>

@@ -5,7 +5,7 @@
 import os
 import os.path as osp
 from math import pi as PI, sqrt
-from typing import Callable, Union
+from typing import Callable, Union,Dict,Any
 
 import numpy as np
 import torch
@@ -312,7 +312,7 @@ class OutputPPBlock(nn.Module):
 
 class DimeNetPlusPlus(nn.Module):
     r"""DimeNet++ network implementation.
-    This model takes multi-view inputs (pos0, pos1, pos2 with corresponding z0, z1, z2),
+    This model takes multi-view inputs (pos0, pos1, pos2 with corresponding z0, z1, z2), 
     computes predictions for each view, and combines them.
     """
     def __init__(self, hidden_channels: int, out_channels: int,
@@ -383,7 +383,7 @@ class DimeNetPlusPlus(nn.Module):
         pos_i = pos[idx_i]
         pos_ji = pos[idx_j] - pos_i
         pos_ki = pos[idx_k] - pos_i
-
+        
         a = (pos_ji * pos_ki).sum(dim=-1)
         b = torch.linalg.cross(pos_ji, pos_ki).norm(dim=-1)
         angle = torch.atan2(b, a)
@@ -400,19 +400,37 @@ class DimeNetPlusPlus(nn.Module):
         _, P0 = self._forward_single(z0, pos0, batch)
         _, P1 = self._forward_single(z1, pos1, batch)
         _, P2 = self._forward_single(z2, pos2, batch)
-
+        
         if batch is not None:
             from torch_scatter import scatter
-
+            
             num_graphs = batch.max().item() + 1
-
+            
             if P0.size(0) != num_graphs:
                 P0 = scatter(P0, batch, dim=0, dim_size=num_graphs, reduce='mean')
             if P1.size(0) != num_graphs:
                 P1 = scatter(P1, batch, dim=0, dim_size=num_graphs, reduce='mean')
             if P2.size(0) != num_graphs:
                 P2 = scatter(P2, batch, dim=0, dim_size=num_graphs, reduce='mean')
-
+        
         P_concat = torch.cat([P0, P1, P2], dim=1)
         P = self.output_combination(P_concat)
         return None, P
+    @classmethod
+    def get_default_params(cls) -> Dict[str, Any]:
+        return {
+            'hidden_channels': 128,
+            'out_channels': 128,
+            'num_blocks': 4,
+            'int_emb_size': 64,
+            'basis_emb_size': 8,
+            'out_emb_channels': 256,
+            'num_spherical': 7,
+            'num_radial': 6,
+            'cutoff': 5.0,
+            'max_num_neighbors': 32,
+            'envelope_exponent': 5,
+            'num_before_skip': 1,
+            'num_after_skip': 2,
+            'num_output_layers': 3,
+        }

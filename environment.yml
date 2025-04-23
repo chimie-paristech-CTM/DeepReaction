@@ -12,13 +12,19 @@ dependencies:
   - ipykernel
   - jupyterlab
   - pytorch=2.5.0
-  - cudatoolkit=12.4        
+  - cudatoolkit=12.4
   - pytorch-lightning
-  - pytorch-geometric      
+  - pytorch-geometric
   - tensorboard
   - wandb
-  - seaborn
-  - torch_geometric
-  - rdkit
   - pip
- 
+  - seaborn
+  - ray
+  - optuna
+  - "ray[tune]"
+  - pip:
+      - torch-scatter
+      - torch-sparse
+      - torch-cluster
+      - torch-spline-conv
+      - torch-geometric
