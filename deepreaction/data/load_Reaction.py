@@ -76,7 +76,7 @@ def scale_reaction_dataset(ds_list, scalers):
     return new_data_list
 
 def check_reaction_id_overlap(train_data, val_data, test_data):
-    logger = logging.getLogger('deep')
+    logger = logging.getLogger('deepreaction')
     
     train_reaction_ids = {data.reaction_id for data in train_data if hasattr(data, 'reaction_id')}
     val_reaction_ids = {data.reaction_id for data in val_data if hasattr(data, 'reaction_id')}
@@ -168,7 +168,7 @@ def prepare_data_splits(dataset, train_indices, val_indices, test_indices, use_s
     return train_scaled, val_scaled, test_scaled, scalers
 
 def create_cv_splits(dataset, cv_folds, random_seed, val_ratio=0.1, train_ratio=0.8, grouped=True):
-    logger = logging.getLogger('deep')
+    logger = logging.getLogger('deepreaction')
     
     np.random.seed(random_seed)
     torch.manual_seed(random_seed)
@@ -271,7 +271,7 @@ def load_reaction(
     dir_field='R_dir',
     reaction_field='reaction'
 ):
-    logger = logging.getLogger('deep')
+    logger = logging.getLogger('deepreaction')
     torch.manual_seed(random_seed)
     np.random.seed(random_seed)
     random.seed(random_seed)
@@ -416,7 +416,7 @@ def load_reaction_for_inference(
         dir_field='R_dir',
         reaction_field='reaction'
 ):
-    logger = logging.getLogger('deep')
+    logger = logging.getLogger('deepreaction')
     torch.manual_seed(random_seed)
     np.random.seed(random_seed)
     random.seed(random_seed)

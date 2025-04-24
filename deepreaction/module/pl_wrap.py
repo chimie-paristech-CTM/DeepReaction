@@ -11,44 +11,45 @@ from torch_geometric.utils import to_dense_batch
 from ..models.factory import ModelFactory
 from ..utils.metrics import compute_regression_metrics
 
+
 class Estimator(pl.LightningModule):
     def __init__(
-        self,
-        model_type: str,
-        readout: str,
-        batch_size: int,
-        lr: float,
-        max_num_atoms_in_mol: int,
-        scaler=None,
-        use_layer_norm: bool = False,
-        node_latent_dim: int = 128,
-        edge_latent_dim: int = None,
-        dropout: float = 0.0,
-        model_kwargs: Optional[Dict[str, Any]] = None,
-        readout_kwargs: Optional[Dict[str, Any]] = None,
-        optimizer: str = 'adam',
-        weight_decay: float = 0.0,
-        scheduler: str = 'cosine',
-        scheduler_patience: int = 10,
-        scheduler_factor: float = 0.5,
-        warmup_epochs: int = 0,
-        min_lr: float = 1e-6,
-        loss_function: str = 'mse',
-        target_weights: List[float] = None,
-        uncertainty_method: str = None,
-        gradient_clip_val: float = 0.0,
-        monitor_loss: str = 'val_total_loss',
-        name: str = None,
-        use_xtb_features: bool = False,
-        num_xtb_features: int = 0,
-        prediction_hidden_layers: int = 3,
-        prediction_hidden_dim: int = 128,
-        target_field_names: List[str] = None,
-        **kwargs
+            self,
+            model_type: str,
+            readout: str,
+            batch_size: int,
+            lr: float,
+            max_num_atoms_in_mol: int,
+            scaler=None,
+            use_layer_norm: bool = False,
+            node_latent_dim: int = 128,
+            edge_latent_dim: int = None,
+            dropout: float = 0.0,
+            model_kwargs: Optional[Dict[str, Any]] = None,
+            readout_kwargs: Optional[Dict[str, Any]] = None,
+            optimizer: str = 'adam',
+            weight_decay: float = 0.0,
+            scheduler: str = 'cosine',
+            scheduler_patience: int = 10,
+            scheduler_factor: float = 0.5,
+            warmup_epochs: int = 0,
+            min_lr: float = 1e-6,
+            loss_function: str = 'mse',
+            target_weights: List[float] = None,
+            uncertainty_method: str = None,
+            gradient_clip_val: float = 0.0,
+            monitor_loss: str = 'val_total_loss',
+            name: str = None,
+            use_xtb_features: bool = False,
+            num_xtb_features: int = 0,
+            prediction_hidden_layers: int = 3,
+            prediction_hidden_dim: int = 128,
+            target_field_names: List[str] = None,
+            **kwargs
     ):
         super().__init__()
         self.save_hyperparameters()
-        
+
         self.model_type = model_type
         self.readout = readout
         self.batch_size = batch_size
@@ -61,12 +62,19 @@ class Estimator(pl.LightningModule):
         self.dropout = dropout
         self.monitor_loss = monitor_loss
         self.name = name
-        self.num_targets = len(self.scaler) if isinstance(self.scaler, list) else 1
+
+        if target_field_names is not None:
+            self.num_targets = len(target_field_names)
+        elif isinstance(self.scaler, list):
+            self.num_targets = len(self.scaler)
+        else:
+            self.num_targets = 1
+
         self.use_xtb_features = use_xtb_features
         self.num_xtb_features = num_xtb_features
         self.prediction_hidden_layers = prediction_hidden_layers
         self.prediction_hidden_dim = prediction_hidden_dim
-        
+
         self.optimizer_type = optimizer
         self.weight_decay = weight_decay
         self.scheduler_type = scheduler
@@ -80,7 +88,7 @@ class Estimator(pl.LightningModule):
         self.gradient_clip_val = gradient_clip_val
         self.model_kwargs = model_kwargs if model_kwargs is not None else {}
         self.readout_kwargs = readout_kwargs if readout_kwargs is not None else {}
-        
+
         self.train_output = defaultdict(list)
         self.val_output = defaultdict(list)
         self.test_output = defaultdict(list)
@@ -91,12 +99,12 @@ class Estimator(pl.LightningModule):
         self.val_metrics = {}
         self.test_metrics = {}
         self.target_field_names = target_field_names
-        
+
         self._init_model()
-    
+
     def _init_model(self):
         from ..models.model import MoleculePredictionModel
-        
+
         self.model = MoleculePredictionModel(
             model_type=self.model_type,
             readout_type=self.readout,
@@ -112,14 +120,14 @@ class Estimator(pl.LightningModule):
             prediction_hidden_dim=self.prediction_hidden_dim,
             num_xtb_features=self.num_xtb_features
         )
-        
+
         self.net = self.model.base_model
         self.readout_module = self.model.readout
         self.regr_or_cls_nn = self.model.prediction_mlp
-    
+
     def forward(self, pos0, pos1, pos2, z0, z1, z2, batch_mapping, xtb_features=None):
         return self.model(pos0, pos1, pos2, z0, z1, z2, batch_mapping, xtb_features)
-    
+
     def configure_optimizers(self):
         if self.optimizer_type == 'adam':
             optimizer = torch.optim.Adam(self.parameters(), lr=self.lr, weight_decay=self.weight_decay)
@@ -131,10 +139,10 @@ class Estimator(pl.LightningModule):
             optimizer = torch.optim.RMSprop(self.parameters(), lr=self.lr, weight_decay=self.weight_decay)
         else:
             optimizer = torch.optim.Adam(self.parameters(), lr=self.lr, weight_decay=self.weight_decay)
-        
+
         if self.scheduler_type == 'none' or not self.scheduler_type:
             return {'optimizer': optimizer, 'monitor': self.monitor_loss}
-        
+
         if self.scheduler_type == 'cosine':
             from torch.optim.lr_scheduler import CosineAnnealingLR
             scheduler = CosineAnnealingLR(
@@ -160,15 +168,15 @@ class Estimator(pl.LightningModule):
             scheduler = ExponentialLR(optimizer, gamma=0.95)
         elif self.scheduler_type == 'warmup_cosine':
             from torch.optim.lr_scheduler import CosineAnnealingLR, LinearLR, SequentialLR
-            
+
             warmup_scheduler = LinearLR(
                 optimizer, start_factor=0.1, end_factor=1.0, total_iters=self.warmup_epochs
             )
-            
+
             remaining_epochs = max(1, (self.trainer.max_epochs - self.warmup_epochs) if self.trainer else 100)
-            
+
             cosine_scheduler = CosineAnnealingLR(optimizer, T_max=remaining_epochs, eta_min=self.min_lr)
-            
+
             if self.warmup_epochs > 0:
                 scheduler = SequentialLR(
                     optimizer,
@@ -179,28 +187,28 @@ class Estimator(pl.LightningModule):
                 scheduler = cosine_scheduler
         else:
             return {'optimizer': optimizer, 'monitor': self.monitor_loss}
-        
+
         scheduler_config = {
             'scheduler': scheduler,
             'interval': 'epoch',
             'name': 'lr',
         }
-        
+
         if self.scheduler_type == 'plateau':
             scheduler_config['monitor'] = self.monitor_loss
             scheduler_config['frequency'] = 1
-        
+
         return {'optimizer': optimizer, 'lr_scheduler': scheduler_config, 'monitor': self.monitor_loss}
-    
+
     def _batch_loss(self, pos0, pos1, pos2, y, z0, z1, z2, batch_mapping, xtb_features=None):
         _, graph_embeddings, predictions = self.forward(
             pos0, pos1, pos2, z0, z1, z2, batch_mapping, xtb_features
         )
-        
+
         total_loss = 0.0
         for i in range(self.num_targets):
             target_weight = self.target_weights[i] if i < len(self.target_weights) else 1.0
-            
+
             if self.loss_function == 'mse':
                 loss = F.mse_loss(predictions[:, i], y[:, i])
             elif self.loss_function == 'mae' or self.loss_function == 'l1':
@@ -211,20 +219,20 @@ class Estimator(pl.LightningModule):
                 loss = F.smooth_l1_loss(predictions[:, i], y[:, i])
             else:
                 loss = F.l1_loss(predictions[:, i], y[:, i])
-            
+
             total_loss += target_weight * loss
-        
+
         return total_loss, graph_embeddings, predictions
-    
+
     def _step(self, batch, step_type: str):
         pos0, pos1, pos2, y = batch.pos0, batch.pos1, batch.pos2, batch.y
         z0, z1, z2, batch_mapping = batch.z0, batch.z1, batch.z2, batch.batch
         xtb_features = getattr(batch, 'xtb_features', None)
-        
+
         total_loss, _, predictions = self._batch_loss(
             pos0, pos1, pos2, y, z0, z1, z2, batch_mapping, xtb_features
         )
-        
+
         output = (predictions.detach(), y.detach())
         if step_type == 'train':
             self.train_output[self.current_epoch].append(output)
@@ -233,97 +241,100 @@ class Estimator(pl.LightningModule):
         elif step_type == 'test':
             self.test_output[self.num_called_test].append(output)
             self.test_true[self.num_called_test].append(y.detach())
-        
+
         return total_loss
-    
+
     def training_step(self, batch, batch_idx):
         train_total_loss = self._step(batch, 'train')
-        self.log('train_total_loss', train_total_loss, batch_size=self.batch_size, on_step=True, on_epoch=True, prog_bar=True)
+        self.log('train_total_loss', train_total_loss, batch_size=self.batch_size, on_step=True, on_epoch=True,
+                 prog_bar=True)
         return train_total_loss
-    
+
     def validation_step(self, batch, batch_idx):
         val_total_loss = self._step(batch, 'valid')
-        self.log('val_total_loss', val_total_loss, batch_size=self.batch_size, on_step=True, on_epoch=True, prog_bar=True)
+        self.log('val_total_loss', val_total_loss, batch_size=self.batch_size, on_step=True, on_epoch=True,
+                 prog_bar=True)
         return val_total_loss
-    
+
     def test_step(self, batch, batch_idx):
         test_total_loss = self._step(batch, 'test')
         self.log('test_total_loss', test_total_loss, batch_size=self.batch_size)
         return test_total_loss
-    
+
     def _epoch_end_report(self, epoch_outputs, epoch_type):
         preds = torch.cat([out[0] for out in epoch_outputs], dim=0)
         trues = torch.cat([out[1] for out in epoch_outputs], dim=0)
-    
+
         y_pred_np = preds.cpu().numpy()
         y_true_np = trues.cpu().numpy()
-    
+
         all_metrics = []
         target_metrics = {}
-    
+
         metrics_to_compute = ['mae', 'rmse', 'r2', 'mpae', 'max_ae', 'median_ae']
-    
+
         for i in range(self.num_targets):
             y_pred_target = y_pred_np[:, i].reshape(-1, 1)
             y_true_target = y_true_np[:, i].reshape(-1, 1)
-    
+
             if isinstance(self.scaler, list) and len(self.scaler) > i:
                 y_pred_target = self.scaler[i].inverse_transform(y_pred_target)
                 y_true_target = self.scaler[i].inverse_transform(y_true_target)
-    
+
             metrics_dict = compute_regression_metrics(y_true_target, y_pred_target, metrics=metrics_to_compute)
-    
+
             target_name = self.target_field_names[i] if self.target_field_names and i < len(
                 self.target_field_names) else f"Target {i}"
-    
+
             target_metrics[f"target_{i}"] = metrics_dict
-            
+
             metric_values = [metrics_dict.get(metric, 0) for metric in metrics_to_compute]
             all_metrics.append(metric_values)
-    
+
             self.log(f'{epoch_type} MAE {target_name}', metrics_dict['mae'], batch_size=self.batch_size)
             self.log(f'{epoch_type} RMSE {target_name}', metrics_dict['rmse'], batch_size=self.batch_size)
             self.log(f'{epoch_type} R2 {target_name}', metrics_dict['r2'], batch_size=self.batch_size)
-            
+
             if 'mpae' in metrics_dict and not np.isnan(metrics_dict['mpae']):
                 self.log(f'{epoch_type} MPAE {target_name}', metrics_dict['mpae'], batch_size=self.batch_size)
-            
+
             if 'max_ae' in metrics_dict:
                 self.log(f'{epoch_type} MAX_AE {target_name}', metrics_dict['max_ae'], batch_size=self.batch_size)
-                
+
             if 'median_ae' in metrics_dict:
                 self.log(f'{epoch_type} MEDIAN_AE {target_name}', metrics_dict['median_ae'], batch_size=self.batch_size)
-    
+
         avg_mae = np.mean([m[0] for m in all_metrics])
         avg_rmse = np.mean([m[1] for m in all_metrics])
         avg_r2 = np.mean([m[2] for m in all_metrics])
-        
+
         avg_mpae = np.mean([m[3] for m in all_metrics if not np.isnan(m[3])])
         avg_max_ae = np.mean([m[4] for m in all_metrics])
         avg_median_ae = np.mean([m[5] for m in all_metrics])
-    
+
         self.log(f'{epoch_type} Avg MAE', avg_mae, batch_size=self.batch_size)
         self.log(f'{epoch_type} Avg RMSE', avg_rmse, batch_size=self.batch_size)
         self.log(f'{epoch_type} Avg R2', avg_r2, batch_size=self.batch_size)
-        
+
         if not np.isnan(avg_mpae):
             self.log(f'{epoch_type} Avg MPAE', avg_mpae, batch_size=self.batch_size)
         self.log(f'{epoch_type} Avg MAX_AE', avg_max_ae, batch_size=self.batch_size)
         self.log(f'{epoch_type} Avg MEDIAN_AE', avg_median_ae, batch_size=self.batch_size)
-    
+
         return target_metrics, y_pred_np, y_true_np
-    
+
     def on_train_epoch_end(self):
         if self.current_epoch in self.train_output and len(self.train_output[self.current_epoch]) > 0:
             train_metrics, _, _ = self._epoch_end_report(self.train_output[self.current_epoch], epoch_type='Train')
             self.train_metrics[self.current_epoch] = train_metrics
             del self.train_output[self.current_epoch]
-    
+
     def on_validation_epoch_end(self):
         if self.current_epoch in self.val_output and len(self.val_output[self.current_epoch]) > 0:
-            val_metrics, y_pred, y_true = self._epoch_end_report(self.val_output[self.current_epoch], epoch_type='Validation')
+            val_metrics, y_pred, y_true = self._epoch_end_report(self.val_output[self.current_epoch],
+                                                                 epoch_type='Validation')
             self.val_metrics[self.current_epoch] = val_metrics
-            
+
             if 'target_0' in val_metrics:
                 for target_idx, target_data in val_metrics.items():
                     if isinstance(target_data, dict) and 'mae' in target_data:
@@ -332,17 +343,22 @@ class Estimator(pl.LightningModule):
                         self.val_metrics[f'val_r2'] = target_data.get('r2', 0.0)
                         break
             else:
-                avg_mae = np.mean([m[0] for m in self.all_metrics]) if hasattr(self, 'all_metrics') and self.all_metrics else float('inf')
-                avg_rmse = np.mean([m[1] for m in self.all_metrics]) if hasattr(self, 'all_metrics') and self.all_metrics else float('inf')
-                avg_r2 = np.mean([m[2] for m in self.all_metrics]) if hasattr(self, 'all_metrics') and self.all_metrics else 0.0
-                
+                avg_mae = np.mean([m[0] for m in self.all_metrics]) if hasattr(self,
+                                                                               'all_metrics') and self.all_metrics else float(
+                    'inf')
+                avg_rmse = np.mean([m[1] for m in self.all_metrics]) if hasattr(self,
+                                                                                'all_metrics') and self.all_metrics else float(
+                    'inf')
+                avg_r2 = np.mean([m[2] for m in self.all_metrics]) if hasattr(self,
+                                                                              'all_metrics') and self.all_metrics else 0.0
+
                 self.val_metrics['val_mae'] = avg_mae
                 self.val_metrics['val_rmse'] = avg_rmse
                 self.val_metrics['val_r2'] = avg_r2
-                
+
             self.val_true[self.current_epoch] = y_true
             del self.val_output[self.current_epoch]
-            
+
     def on_test_epoch_end(self):
         if self.num_called_test in self.test_output and len(self.test_output[self.num_called_test]) > 0:
             metrics, y_pred, y_true = self._epoch_end_report(self.test_output[self.num_called_test], epoch_type='Test')

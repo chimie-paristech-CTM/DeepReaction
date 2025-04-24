@@ -120,7 +120,7 @@ def train_fold(config, checkpoint_dir=None):
     os.makedirs(fold_dir, exist_ok=True)
 
     log_level = getattr(logging, args.log_level.upper())
-    logger = logging.getLogger('deep')
+    logger = logging.getLogger('deepreaction')
     logger.setLevel(log_level)
 
     if logger.hasHandlers():

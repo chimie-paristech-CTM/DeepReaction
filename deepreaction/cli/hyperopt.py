@@ -287,7 +287,7 @@ def setup_logging(args):
 
     log_level = getattr(logging, args.log_level.upper())
 
-    logger = logging.getLogger('deep')
+    logger = logging.getLogger('deepreaction')
     logger.setLevel(log_level)
 
     if logger.hasHandlers():
@@ -548,7 +548,7 @@ def train_function(config, checkpoint_dir=None):
     os.makedirs(args.output_dir, exist_ok=True)
 
     log_level = getattr(logging, args.log_level.upper())
-    logger = logging.getLogger('deep')
+    logger = logging.getLogger('deepreaction')
     logger.setLevel(log_level)
 
     if logger.hasHandlers():

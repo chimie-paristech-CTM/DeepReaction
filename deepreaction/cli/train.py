@@ -234,7 +234,7 @@ def load_datasets(args, logger):
 
 
 def create_model(args, scalers) -> pl.LightningModule:
-    logger = logging.getLogger('deep')
+    logger = logging.getLogger('deepreaction')
 
     scalers_to_use = scalers if args.use_scaler else None
     num_targets = len(args.reaction_target_fields) if args.reaction_target_fields else 1

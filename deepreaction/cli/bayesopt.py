@@ -159,7 +159,7 @@ def setup_logging(args):
 
     log_level = getattr(logging, args.log_level.upper())
 
-    logger = logging.getLogger('deep')
+    logger = logging.getLogger('deepreaction')
     logger.setLevel(log_level)
 
     if logger.hasHandlers():

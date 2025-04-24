@@ -1,7 +1,7 @@
 # Deep Reaction
 
 <div align="center">
-  <img src="./deep/assets/reaction.jpg" width="100px" alt="Deep Reaction Logo" />
+  <img src="deepreaction/assets/reaction.jpg" width="100px" alt="Deep Reaction Logo" />
   <p><strong>Efficient Prediction of Chemical reactions</strong></p>
 </div>
 

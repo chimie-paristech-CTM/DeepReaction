@@ -447,7 +447,7 @@
 
     // Recursively compare objects and arrays.
     if (areArrays) {
-      // Compare array lengths to determine if a deep comparison is necessary.
+      // Compare array lengths to determine if a deepreaction comparison is necessary.
       length = a.length;
       if (length !== b.length) return false;
       // Deep compare the contents, ignoring non-numeric properties.
@@ -458,7 +458,7 @@
       // Deep compare objects.
       var _keys = keys(a), key;
       length = _keys.length;
-      // Ensure that both objects contain the same number of properties before comparing deep equality.
+      // Ensure that both objects contain the same number of properties before comparing deepreaction equality.
       if (keys(b).length !== length) return false;
       while (length--) {
         // Deep compare each member
@@ -472,7 +472,7 @@
     return true;
   }
 
-  // Perform a deep comparison to check if two objects are equal.
+  // Perform a deepreaction comparison to check if two objects are equal.
   function isEqual(a, b) {
     return eq(a, b);
   }
@@ -640,7 +640,7 @@
     return obj;
   }
 
-  // Normalize a (deep) property `path` to array.
+  // Normalize a (deepreaction) property `path` to array.
   // Like `_.iteratee`, this function can be customized.
   function toPath$1(path) {
     return isArray(path) ? path : [path];
@@ -663,7 +663,7 @@
     return length ? obj : void 0;
   }
 
-  // Get the value of the (deep) property on `path` from `object`.
+  // Get the value of the (deepreaction) property on `path` from `object`.
   // If any property in `path` does not exist or if the value is
   // `undefined`, return `defaultValue` instead.
   // The `path` is normalized through `_.toPath`.

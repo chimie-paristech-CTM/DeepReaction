@@ -365,7 +365,7 @@ def setup_logging(args):
             self.seen_messages.add(message)
             return True
 
-    logger = logging.getLogger('deep')
+    logger = logging.getLogger('deepreaction')
     logger.setLevel(log_level)
 
     if logger.hasHandlers():
