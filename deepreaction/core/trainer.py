@@ -48,7 +48,6 @@ class ReactionTrainer:
             min_epochs: int = 10,
             gradient_clip_val: float = 0.0,
             log_every_n_steps: int = 50,
-            target_weights: Optional[List[float]] = None,
             **kwargs
     ):
         self.model_type = model_type
@@ -82,7 +81,6 @@ class ReactionTrainer:
         self.prediction_hidden_dim = prediction_hidden_dim
         self.gradient_clip_val = gradient_clip_val
         self.log_every_n_steps = log_every_n_steps
-        self.target_weights = target_weights
         self.kwargs = kwargs
 
         self.model = None
@@ -171,7 +169,7 @@ class ReactionTrainer:
             'warmup_epochs': self.warmup_epochs,
             'min_lr': self.min_lr,
             'loss_function': self.kwargs.get('loss_function', 'mse'),
-            'target_weights': self.target_weights if self.target_weights is not None else [1.0] * self.num_targets,
+            'target_weights': self.kwargs.get('target_weights', [1.0] * self.num_targets),
             'use_xtb_features': self.use_xtb_features,
             'num_xtb_features': self.num_xtb_features,
             'prediction_hidden_layers': self.prediction_hidden_layers,

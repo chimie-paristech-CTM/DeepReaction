@@ -1,7 +1,3 @@
-"""
-"Fast and Uncertainty-Aware Directional Message Passing for Non-Equilibrium Molecules"
-"""
-
 import os
 import os.path as osp
 from math import pi as PI, sqrt
@@ -22,18 +18,7 @@ from torch_geometric.nn.resolver import activation_resolver
 
 import sympy as sym
 
-
-
-
-# -------------------------------
-# Mathematical Utility Functions
-# -------------------------------
 def bessel_basis(num_spherical, num_radial):
-    """
-    Construct a list of symbolic expressions for Bessel basis functions.
-    Returns a two-dimensional list with shape [num_spherical][num_radial].
-    Here, sin(j*pi*x)/(j*pi*x) is used as an example basis function.
-    """
     x = sym.symbols('x')
     bessel_forms = []
     for i in range(num_spherical):
@@ -46,29 +31,18 @@ def bessel_basis(num_spherical, num_radial):
 
 
 def real_sph_harm(num_spherical):
-    """
-    Construct a list of symbolic expressions for real spherical harmonics.
-    Returns a list where each element is a tuple containing the spherical harmonic expression.
-    For l=0, returns a constant; for l>0, sin(l*theta) is used as an example.
-    """
     theta = sym.symbols('theta')
     sph_harm = []
     for l in range(num_spherical):
         if l == 0:
-            expr = 1  # Constant function
+            expr = 1
         else:
             expr = sym.sin(l * theta)
         sph_harm.append((expr,))
     return sph_harm
 
 
-# -------------------------------
-# Model Helper Modules
-# -------------------------------
 class Envelope(nn.Module):
-    """
-    Envelope function module that applies a polynomial envelope to distances.
-    """
     def __init__(self, exponent):
         super().__init__()
         self.p = exponent + 1
@@ -81,14 +55,10 @@ class Envelope(nn.Module):
         x_pow_p0 = x.pow(p - 1)
         x_pow_p1 = x_pow_p0 * x
         x_pow_p2 = x_pow_p1 * x
-        # Apply the envelope function only for x < 1.0
         return (1. / x + a * x_pow_p0 + b * x_pow_p1 + c * x_pow_p2) * (x < 1.0).to(x.dtype)
 
 
 class BesselBasisLayer(nn.Module):
-    """
-    Bessel basis layer that computes radial basis functions using an envelope.
-    """
     def __init__(self, num_radial, cutoff=5.0, envelope_exponent=5):
         super().__init__()
         self.cutoff = cutoff
@@ -107,9 +77,6 @@ class BesselBasisLayer(nn.Module):
 
 
 class SphericalBasisLayer(nn.Module):
-    """
-    Spherical basis layer that computes angular basis functions using spherical harmonics and Bessel functions.
-    """
     def __init__(self, num_spherical, num_radial, cutoff=5.0, envelope_exponent=5):
         super().__init__()
         self.num_spherical = num_spherical
@@ -117,7 +84,6 @@ class SphericalBasisLayer(nn.Module):
         self.cutoff = cutoff
         self.envelope = Envelope(envelope_exponent)
 
-        # Initialize symbolic expressions for Bessel basis and spherical harmonics.
         bessel_forms = bessel_basis(num_spherical, num_radial)
         sph_harm_forms = real_sph_harm(num_spherical)
 
@@ -129,7 +95,6 @@ class SphericalBasisLayer(nn.Module):
         for i in range(num_spherical):
             if i == 0:
                 sph_val = sym.lambdify([theta], sph_harm_forms[i][0], modules)(0)
-                # For l=0, use a constant function
                 self.sph_funcs.append(lambda theta_val, s=sph_val: torch.zeros_like(theta_val) + s)
             else:
                 func = sym.lambdify([theta], sph_harm_forms[i][0], modules)
@@ -140,21 +105,15 @@ class SphericalBasisLayer(nn.Module):
 
     def forward(self, dist, angle, idx_kj):
         dist = dist / self.cutoff
-        # Compute the radial basis functions (rbf) using the Bessel functions
         rbf = torch.stack([f(dist) for f in self.bessel_funcs], dim=1)
         rbf = self.envelope(dist).unsqueeze(-1) * rbf
-        # Compute the angular basis functions (cbf) using the spherical harmonic functions
         cbf = torch.stack([f(angle) for f in self.sph_funcs], dim=1)
         n, k = self.num_spherical, self.num_radial
-        # Multiply and reshape the basis function outputs
         out = (rbf[idx_kj].view(-1, n, k) * cbf.view(-1, n, 1)).view(-1, n * k)
         return out
 
 
 class EmbeddingBlock(nn.Module):
-    """
-    Embedding block that combines node embeddings and radial basis function embeddings.
-    """
     def __init__(self, num_radial, hidden_channels, act):
         super().__init__()
         self.act = act
@@ -169,18 +128,12 @@ class EmbeddingBlock(nn.Module):
         self.lin.reset_parameters()
 
     def forward(self, x, rbf, i, j):
-        # Lookup node embeddings
         x = self.emb(x)
-        # Transform radial basis functions
         rbf = self.act(self.lin_rbf(rbf))
-        # Concatenate features and transform
         return self.act(self.lin(torch.cat([x[i], x[j], rbf], dim=-1)))
 
 
 class ResidualLayer(nn.Module):
-    """
-    Residual layer with two linear transformations and a skip connection.
-    """
     def __init__(self, hidden_channels, act):
         super().__init__()
         self.act = act
@@ -199,33 +152,24 @@ class ResidualLayer(nn.Module):
 
 
 class InteractionPPBlock(nn.Module):
-    """
-    Interaction block for DimeNet++ that transforms Bessel and spherical basis representations,
-    performs message passing and feature update.
-    """
     def __init__(self, hidden_channels, int_emb_size, basis_emb_size,
                  num_spherical, num_radial, num_before_skip, num_after_skip,
                  act):
         super().__init__()
         self.act = act
-        # Transformations for the radial basis functions (rbf) and spherical basis functions (sbf)
         self.lin_rbf1 = Linear(num_radial, basis_emb_size, bias=False)
         self.lin_rbf2 = Linear(basis_emb_size, hidden_channels, bias=False)
         self.lin_sbf1 = Linear(num_spherical * num_radial, basis_emb_size, bias=False)
         self.lin_sbf2 = Linear(basis_emb_size, int_emb_size, bias=False)
-        # Transform input messages
         self.lin_kj = Linear(hidden_channels, hidden_channels)
         self.lin_ji = Linear(hidden_channels, hidden_channels)
-        # Down-projection and up-projection layers
         self.lin_down = Linear(hidden_channels, int_emb_size, bias=False)
         self.lin_up = Linear(int_emb_size, hidden_channels, bias=False)
-        # Residual layers before skip connection
         self.layers_before_skip = nn.ModuleList([
             nn.Sequential(Linear(hidden_channels, hidden_channels), nn.ReLU())
             for _ in range(num_before_skip)
         ])
         self.lin = Linear(hidden_channels, hidden_channels)
-        # Residual layers after skip connection
         self.layers_after_skip = nn.ModuleList([
             nn.Sequential(Linear(hidden_channels, hidden_channels), nn.ReLU())
             for _ in range(num_after_skip)
@@ -274,9 +218,6 @@ class InteractionPPBlock(nn.Module):
 
 
 class OutputPPBlock(nn.Module):
-    """
-    Output block for DimeNet++ that aggregates features to produce final predictions.
-    """
     def __init__(self, num_radial, hidden_channels, out_emb_channels,
                  out_channels, num_layers, act):
         super().__init__()
@@ -306,15 +247,7 @@ class OutputPPBlock(nn.Module):
         return self.lin(x)
 
 
-# -------------------------------
-# DimeNet++ Model Implementation
-# -------------------------------
-
 class DimeNetPlusPlus(nn.Module):
-    r"""DimeNet++ network implementation.
-    This model takes multi-view inputs (pos0, pos1, pos2 with corresponding z0, z1, z2), 
-    computes predictions for each view, and combines them.
-    """
     def __init__(self, hidden_channels: int, out_channels: int,
                  num_blocks: int, int_emb_size: int, basis_emb_size: int,
                  out_emb_channels: int, num_spherical: int, num_radial: int,
@@ -378,44 +311,71 @@ class DimeNetPlusPlus(nn.Module):
     def _forward_single(self, z, pos, batch=None):
         edge_index = radius_graph(pos, r=self.cutoff, batch=batch,
                                   max_num_neighbors=self.max_num_neighbors)
-        i, j, idx_i, idx_j, idx_k, idx_kj, idx_ji = self.triplets(edge_index, num_nodes=z.size(0))
+
+        num_nodes = z.size(0)
+        row, col = edge_index
+
+        node_mask = torch.ones(num_nodes, dtype=torch.bool, device=z.device)
+        node_mask[row] = False
+        node_mask[col] = False
+
+        isolated_nodes = torch.nonzero(node_mask).squeeze(1)
+        if isolated_nodes.numel() > 0:
+            self_loop_index = torch.stack([isolated_nodes, isolated_nodes], dim=0)
+            edge_index = torch.cat([edge_index, self_loop_index], dim=1)
+
+        i, j, idx_i, idx_j, idx_k, idx_kj, idx_ji = self.triplets(edge_index, num_nodes=num_nodes)
+
         dist = (pos[i] - pos[j]).pow(2).sum(dim=-1).sqrt()
+
+        self_loop_mask = (i == j)
+        dist[self_loop_mask] = 1e-5
+
         pos_i = pos[idx_i]
         pos_ji = pos[idx_j] - pos_i
         pos_ki = pos[idx_k] - pos_i
-        
+
         a = (pos_ji * pos_ki).sum(dim=-1)
         b = torch.linalg.cross(pos_ji, pos_ki).norm(dim=-1)
         angle = torch.atan2(b, a)
+
+        self_triplet_mask = (idx_i == idx_j) | (idx_i == idx_k) | (idx_j == idx_k)
+        angle[self_triplet_mask] = 0.0
+
         rbf = self.rbf(dist)
         sbf = self.sbf(dist, angle, idx_kj)
         x = self.emb(z, rbf, i, j)
-        P = self.output_blocks[0](x, rbf, i, num_nodes=pos.size(0))
+
+        P = self.output_blocks[0](x, rbf, i, num_nodes=num_nodes)
+
         for interaction_block, output_block in zip(self.interaction_blocks, self.output_blocks[1:]):
             x = interaction_block(x, rbf, sbf, idx_kj, idx_ji)
-            P += output_block(x, rbf, i)
+            out = output_block(x, rbf, i, num_nodes=num_nodes)
+            P = P + out
+
         return x, P
 
     def forward(self, z0, z1, z2, pos0, pos1, pos2, batch=None):
         _, P0 = self._forward_single(z0, pos0, batch)
         _, P1 = self._forward_single(z1, pos1, batch)
         _, P2 = self._forward_single(z2, pos2, batch)
-        
+
         if batch is not None:
             from torch_scatter import scatter
-            
+
             num_graphs = batch.max().item() + 1
-            
+
             if P0.size(0) != num_graphs:
                 P0 = scatter(P0, batch, dim=0, dim_size=num_graphs, reduce='mean')
             if P1.size(0) != num_graphs:
                 P1 = scatter(P1, batch, dim=0, dim_size=num_graphs, reduce='mean')
             if P2.size(0) != num_graphs:
                 P2 = scatter(P2, batch, dim=0, dim_size=num_graphs, reduce='mean')
-        
+
         P_concat = torch.cat([P0, P1, P2], dim=1)
         P = self.output_combination(P_concat)
         return None, P
+
     @classmethod
     def get_default_params(cls) -> Dict[str, Any]:
         return {

@@ -53,7 +53,7 @@ def get_parser():
     parser.add_argument('--num_output_layers', type=int, default=3, help='Number of output layers')
     parser.add_argument('--max_num_neighbors', type=int, default=32, help='Maximum number of neighbors')
 
-    parser.add_argument('--batch_size', type=int, default=16, help='Batch size')
+    parser.add_argument('--batch_size', type=int, default=2, help='Batch size')
     parser.add_argument('--eval_batch_size', type=int, default=None, help='Evaluation batch size')
     parser.add_argument('--lr', type=float, default=0.0005, help='Learning rate')
     parser.add_argument('--finetune_lr', type=float, default=None,
@@ -80,6 +80,7 @@ def get_parser():
     parser.add_argument('--no-cuda', action='store_false', dest='cuda', help='Do not use CUDA')
     parser.add_argument('--gpu_id', type=int, default=0, help='GPU ID')
     parser.add_argument('--num_workers', type=int, default=4, help='Number of data loading workers')
+    parser.add_argument('--use_scaler', action='store_true', default=False, help='Use scaler for target normalization')
 
     return parser
 
@@ -105,7 +106,7 @@ def main():
         target_fields=args.target_fields,
         file_patterns=args.file_patterns,
         input_features=args.input_features,
-        use_scaler=True,
+        use_scaler=args.use_scaler,
         train_ratio=args.train_ratio,
         val_ratio=args.val_ratio,
         test_ratio=args.test_ratio,
@@ -181,7 +182,7 @@ def main():
         target_fields=args.target_fields,
         file_patterns=args.file_patterns,
         input_features=args.input_features,
-        use_scaler=True,
+        use_scaler=args.use_scaler,
         random_seed=args.random_seed,
         train_ratio=args.train_ratio,
         val_ratio=args.val_ratio,
@@ -236,7 +237,7 @@ def main():
         save_last_model=args.save_last_model,
         random_seed=args.random_seed,
         num_targets=len(args.target_fields),
-        use_scaler=True,
+        use_scaler=args.use_scaler,
         scalers=dataset.get_scalers(),
         optimizer=args.optimizer,
         weight_decay=args.weight_decay,
@@ -248,7 +249,6 @@ def main():
         dropout=args.dropout,
         use_layer_norm=args.use_layer_norm,
         target_field_names=args.target_fields,
-        target_weights=args.target_weights,
         use_xtb_features=len(args.input_features) > 0,
         num_xtb_features=len(args.input_features),
         prediction_hidden_layers=args.prediction_hidden_layers,

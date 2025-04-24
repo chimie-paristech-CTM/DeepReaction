@@ -62,14 +62,7 @@ class Estimator(pl.LightningModule):
         self.dropout = dropout
         self.monitor_loss = monitor_loss
         self.name = name
-
-        if target_field_names is not None:
-            self.num_targets = len(target_field_names)
-        elif isinstance(self.scaler, list):
-            self.num_targets = len(self.scaler)
-        else:
-            self.num_targets = 1
-
+        self.num_targets = len(self.scaler) if isinstance(self.scaler, list) else 1
         self.use_xtb_features = use_xtb_features
         self.num_xtb_features = num_xtb_features
         self.prediction_hidden_layers = prediction_hidden_layers
@@ -126,6 +119,24 @@ class Estimator(pl.LightningModule):
         self.regr_or_cls_nn = self.model.prediction_mlp
 
     def forward(self, pos0, pos1, pos2, z0, z1, z2, batch_mapping, xtb_features=None):
+        # # Print shapes
+        # print("--- Input Shapes ---")
+        # print(f"pos0 shape: {pos0.shape}")
+        # print(f"pos1 shape: {pos1.shape}")
+        # print(f"pos2 shape: {pos2.shape}")
+        # print(f"z0 shape: {z0.shape}")
+        # print(f"z1 shape: {z1.shape}")
+        # print(f"z2 shape: {z2.shape}")
+
+        # print("\n--- Input Content (Sample) ---")
+        # print(f"pos0 content:\n{pos0}")
+        # print(f"pos1 content:\n{pos1}")
+        # print(f"pos2 content:\n{pos2}")
+        # print(f"z0 content:\n{z0}")
+        # print(f"z1 content:\n{z1}")
+        # print(f"z2 content:\n{z2}")
+        # print("-" * 20) # Separator
+
         return self.model(pos0, pos1, pos2, z0, z1, z2, batch_mapping, xtb_features)
 
     def configure_optimizers(self):
@@ -277,7 +288,7 @@ class Estimator(pl.LightningModule):
             y_pred_target = y_pred_np[:, i].reshape(-1, 1)
             y_true_target = y_true_np[:, i].reshape(-1, 1)
 
-            if isinstance(self.scaler, list) and len(self.scaler) > i:
+            if self.scaler is not None and isinstance(self.scaler, list) and len(self.scaler) > i:
                 y_pred_target = self.scaler[i].inverse_transform(y_pred_target)
                 y_true_target = self.scaler[i].inverse_transform(y_true_target)
 
@@ -322,42 +333,6 @@ class Estimator(pl.LightningModule):
         self.log(f'{epoch_type} Avg MEDIAN_AE', avg_median_ae, batch_size=self.batch_size)
 
         return target_metrics, y_pred_np, y_true_np
-
-    def on_train_epoch_end(self):
-        if self.current_epoch in self.train_output and len(self.train_output[self.current_epoch]) > 0:
-            train_metrics, _, _ = self._epoch_end_report(self.train_output[self.current_epoch], epoch_type='Train')
-            self.train_metrics[self.current_epoch] = train_metrics
-            del self.train_output[self.current_epoch]
-
-    def on_validation_epoch_end(self):
-        if self.current_epoch in self.val_output and len(self.val_output[self.current_epoch]) > 0:
-            val_metrics, y_pred, y_true = self._epoch_end_report(self.val_output[self.current_epoch],
-                                                                 epoch_type='Validation')
-            self.val_metrics[self.current_epoch] = val_metrics
-
-            if 'target_0' in val_metrics:
-                for target_idx, target_data in val_metrics.items():
-                    if isinstance(target_data, dict) and 'mae' in target_data:
-                        self.val_metrics[f'val_mae'] = target_data.get('mae', float('inf'))
-                        self.val_metrics[f'val_rmse'] = target_data.get('rmse', float('inf'))
-                        self.val_metrics[f'val_r2'] = target_data.get('r2', 0.0)
-                        break
-            else:
-                avg_mae = np.mean([m[0] for m in self.all_metrics]) if hasattr(self,
-                                                                               'all_metrics') and self.all_metrics else float(
-                    'inf')
-                avg_rmse = np.mean([m[1] for m in self.all_metrics]) if hasattr(self,
-                                                                                'all_metrics') and self.all_metrics else float(
-                    'inf')
-                avg_r2 = np.mean([m[2] for m in self.all_metrics]) if hasattr(self,
-                                                                              'all_metrics') and self.all_metrics else 0.0
-
-                self.val_metrics['val_mae'] = avg_mae
-                self.val_metrics['val_rmse'] = avg_rmse
-                self.val_metrics['val_r2'] = avg_r2
-
-            self.val_true[self.current_epoch] = y_true
-            del self.val_output[self.current_epoch]
 
     def on_test_epoch_end(self):
         if self.num_called_test in self.test_output and len(self.test_output[self.num_called_test]) > 0:

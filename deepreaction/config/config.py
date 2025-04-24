@@ -6,6 +6,7 @@ from dataclasses import dataclass, field, asdict
 from typing import List, Dict, Optional, Any, Union
 from datetime import datetime
 
+
 @dataclass
 class ReactionConfig:
     dataset_root: Optional[str] = None
@@ -26,7 +27,8 @@ class ReactionConfig:
     reaction_field: str = "reaction"
     random_seed: int = 42234
     force_reload: bool = False
-    
+
+
 @dataclass
 class ModelConfig:
     model_type: str = "dimenet++"
@@ -58,6 +60,7 @@ class ModelConfig:
     attention_hidden_dim: int = 256
     attention_num_heads: int = 8
 
+
 @dataclass
 class TrainingConfig:
     output_dir: str = "./results/reaction_model"
@@ -83,18 +86,19 @@ class TrainingConfig:
     num_workers: int = 4
     resume_from_checkpoint: Optional[str] = None
 
+
 @dataclass
 class Config:
     reaction: ReactionConfig = field(default_factory=ReactionConfig)
     model: ModelConfig = field(default_factory=ModelConfig)
     training: TrainingConfig = field(default_factory=TrainingConfig)
     experiment_name: Optional[str] = None
-    
+
     def __post_init__(self):
         if self.experiment_name is None:
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             self.experiment_name = f"{self.model.model_type}_{self.model.readout}_seed{self.reaction.random_seed}_{timestamp}"
-            
+
     def to_dict(self) -> Dict[str, Any]:
         return {
             "reaction": asdict(self.reaction),
@@ -102,14 +106,14 @@ class Config:
             "training": asdict(self.training),
             "experiment_name": self.experiment_name
         }
-    
+
     @classmethod
     def from_dict(cls, config_dict: Dict[str, Any]) -> 'Config':
         reaction_config = ReactionConfig(**config_dict.get("reaction", {}))
         model_config = ModelConfig(**config_dict.get("model", {}))
         training_config = TrainingConfig(**config_dict.get("training", {}))
         experiment_name = config_dict.get("experiment_name")
-        
+
         return cls(
             reaction=reaction_config,
             model=model_config,
@@ -130,29 +134,30 @@ def parse_args_to_config(args):
         reaction_field=args.reaction_field,
         random_seed=args.random_seed
     )
-    
+
     model_config = ModelConfig()
-    
+
     training_config = TrainingConfig(
         output_dir=args.output_dir,
         max_epochs=args.epochs,
         resume_from_checkpoint=args.resume_from_checkpoint,
         gpu=args.gpu
     )
-    
+
     return Config(
         reaction=reaction_config,
         model=model_config,
         training=training_config
     )
 
+
 def load_config(config_path):
     """Load configuration from a YAML or JSON file."""
     if not os.path.exists(config_path):
         raise FileNotFoundError(f"Config file not found: {config_path}")
-    
+
     file_ext = os.path.splitext(config_path)[1].lower()
-    
+
     with open(config_path, 'r') as f:
         if file_ext in ['.yaml', '.yml']:
             config_dict = yaml.safe_load(f)
@@ -160,21 +165,22 @@ def load_config(config_path):
             config_dict = json.load(f)
         else:
             raise ValueError(f"Unsupported config format: {file_ext}")
-    
+
     return Config.from_dict(config_dict)
+
 
 def save_config(config, output_path):
     """Save configuration to a YAML and JSON file."""
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
-    
+
     config_dict = config.to_dict()
-    
+
     yaml_path = f"{os.path.splitext(output_path)[0]}.yaml"
     with open(yaml_path, 'w') as f:
         yaml.dump(config_dict, f, default_flow_style=False)
-    
+
     json_path = f"{os.path.splitext(output_path)[0]}.json"
     with open(json_path, 'w') as f:
         json.dump(config_dict, f, indent=2)
-    
+
     return yaml_path, json_path
