@@ -18,25 +18,7 @@
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/downloads/)
 
-This repository implements an advanced chemical reaction prediction framework.  the state-of-the-art performance for predicting reaction energy.
-
-## Features
-
-- **Architecture**: Graph neural network for efficient molecular representation
-- **Multiple Readout Functions**: Support for various readout functions including:
-- **PyTorch Lightning Framework**: Clean, modular implementation with easy training and evaluation
-- **Reaction Dataset Support**: Specialized handling for the reaction dataset
-- **Flexible Configuration**: Extensive hyperparameter customization via YAML config or command-line arguments
-- **Interactive Notebook Interface**: User-friendly Jupyter notebook for training and experimentation
-
-## Main Results
-
-### Benchmark on Reaction Dataset
-
-[Placeholder for performance visualization]
-### Visualization of Prediction Performance
-[Placeholder for performance visualization]
-
+This repository corresponds to the DeepReaction project.
 
 ## Getting Started
 
@@ -113,7 +95,7 @@ This is particularly useful for quick experimentation and educational purposes, 
 - `--lr`: Learning rate
 - `--node-dim`: Dimension of node latent representations
 - `--output`: Output directory for results
-- `--reaction-root`: Custom path to reaction dataset root
+- `--reaction-root`: Custom path to reaction dataset root, i.e., the location of the xyz files of reactants, products and TSs
 - `--reaction-csv`: Custom path to reaction dataset CSV
 ...
 
