@@ -1,26 +1,18 @@
+# Deep Reaction
+
 <div align="center">
-  <h1>Deep Reaction</h1>
+  <img src="deepreaction/assets/reaction.jpg" width="100px" alt="Deep Reaction Logo" />
+  <p><strong>Efficient Prediction of Chemical reactions</strong></p>
 </div>
-<div align="center">
-  <img src="./deep/assets/reaction.jpg" width="100px" />
-
-[//]: # (  <h3>Efficient Prediction of Molecular Properties</h3>)
-  <div>
-
-[//]: # (    [Name])
-  </div>
-</div>
-
----
-
-[//]: # (# DeepReaction)
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/downloads/)
+[![PyTorch](https://img.shields.io/badge/PyTorch-2.5.0-orange.svg)](https://pytorch.org/)
+[![PyG](https://img.shields.io/badge/PyG-latest-red.svg)](https://pytorch-geometric.readthedocs.io/)
 
 This repository corresponds to the DeepReaction project.
 
-## Getting Started
+## 🚀 Getting Started
 
 ### Installation
 
@@ -47,14 +39,16 @@ pip install jupyterlab
 ```
 
 ### Dataset Preparation
+
 Place your reaction dataset in the appropriate location:
+
 ```
 ./Dataset
 ```
 
 Alternatively, modify the paths in the configuration file or command-line arguments.
 
-## Training
+## 💻 Training
 
 ### Using Command Line Interface
 
@@ -71,7 +65,7 @@ We provide an interactive Jupyter notebook for easier experimentation and visual
 
 ```bash
 # Start Jupyter notebook server
-example/train_demo.ipynb
+jupyter lab
 
 # Navigate to example/train_demo.ipynb
 ```
@@ -87,7 +81,7 @@ This is particularly useful for quick experimentation and educational purposes, 
 - Visualize the training process and results in real-time
 - Interact with model predictions and understand performance characteristics
 
-### Available Training Options
+### Available command line options
 
 - `--readout`: Readout function type (set_transformer, sum, mean, max, attention)
 - `--batch`: Batch size for training
@@ -97,72 +91,17 @@ This is particularly useful for quick experimentation and educational purposes, 
 - `--output`: Output directory for results
 - `--reaction-root`: Custom path to reaction dataset root, i.e., the location of the xyz files of reactants, products and TSs
 - `--reaction-csv`: Custom path to reaction dataset CSV
-...
 
-
-
-## Evaluation
+## 📈 Evaluation
 
 To evaluate a trained model:
 
 ```bash
 # Basic evaluation
 ./example/inference.sh
-
 ```
 
-[//]: # (## Project Structure)
-
-[//]: # ()
-[//]: # (```)
-
-[//]: # (├── deep/                # Main model code)
-
-[//]: # (│   ├── cli/             # Command-line interface)
-
-[//]: # (│   │   ├── config.py    # Configuration handling)
-
-[//]: # (│   │   ├── train.py     # Training script)
-
-[//]: # (│   │   ├── finetune.py  # Fine-tuning script)
-
-[//]: # (│   │   ├── inference.py # Inference script)
-
-[//]: # (│   │   └── hyperopt.py  # Hyperparameter optimization)
-
-[//]: # (│   ├── data/            # Data loading utilities)
-
-[//]: # (│   ├── model/           # Model definitions)
-
-[//]: # (│   │   └── model.py     # Model implementation)
-
-[//]: # (│   ├── module/          # PyTorch Lightning modules)
-
-[//]: # (│   │   └── pl_wrap.py   # Lightning wrapper for models)
-
-[//]: # (│   └── utils/           # Utility functions)
-
-[//]: # (│       ├── metrics.py   # Evaluation metrics)
-
-[//]: # (│       ├── model_utils.py  # Model utilities)
-
-[//]: # (│       └── visualization.py  # Visualization tools)
-
-[//]: # (├── example/             # Example scripts and notebooks)
-
-[//]: # (│   ├── train.sh         # Training script for XTB dataset)
-
-[//]: # (│   ├── inference.sh     # Inference script)
-
-[//]: # (│   └── train_demo.ipynb # Interactive Jupyter notebook for training)
-
-[//]: # (├── configs/             # Configuration files)
-
-[//]: # (└── README.md            # This file)
-
-[//]: # (```)
-
-## Advanced Usage
+## 🔧 Advanced Usage
 
 ### Fine-tuning Pre-trained Models
 
@@ -178,20 +117,19 @@ To evaluate a trained model:
 ./example/hyperopt.sh 
 ```
 
-## Citation
-
+## 📝 Citation
 
 ```
 [Placeholder]
 ```
 
-## Acknowledgements
+## 🙏 Acknowledgements
 
 This implementation is built upon several open-source projects:
 
 - [PyTorch Geometric](https://github.com/pyg-team/pytorch_geometric)
 - [PyTorch Lightning](https://github.com/Lightning-AI/lightning)
 
-## License
+## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.

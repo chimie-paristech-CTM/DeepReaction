@@ -261,7 +261,7 @@ jQuery.extend = jQuery.fn.extend = function() {
 		length = arguments.length,
 		deep = false;
 
-	// Handle a deep copy situation
+	// Handle a deepreaction copy situation
 	if ( typeof target === "boolean" ) {
 		deep = target;
 
@@ -270,7 +270,7 @@ jQuery.extend = jQuery.fn.extend = function() {
 		i++;
 	}
 
-	// Handle case when target is a string or something (possible in deep copy)
+	// Handle case when target is a string or something (possible in deepreaction copy)
 	if ( typeof target !== "object" && !isFunction( target ) ) {
 		target = {};
 	}
@@ -9105,7 +9105,7 @@ function inspectPrefiltersOrTransports( structure, options, originalOptions, jqX
 }
 
 // A special extend for ajax options
-// that takes "flat" options (not to be deep extended)
+// that takes "flat" options (not to be deepreaction extended)
 // Fixes #9887
 function ajaxExtend( target, src ) {
 	var key, deep,
@@ -9348,10 +9348,10 @@ jQuery.extend( {
 			"text xml": jQuery.parseXML
 		},
 
-		// For options that shouldn't be deep extended:
+		// For options that shouldn't be deepreaction extended:
 		// you can add your own custom options here if
 		// and when you create one that shouldn't be
-		// deep extended (see ajaxExtend)
+		// deepreaction extended (see ajaxExtend)
 		flatOptions: {
 			url: true,
 			context: true

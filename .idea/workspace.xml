@@ -5,9 +5,17 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="94731d45-201e-4dbc-a4e7-9a36e7716e22" name="更改" comment="">
-      <change afterPath="$PROJECT_DIR$/deep/cli/bayesopt.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/hyperopt_bayes.sh" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/deepreaction/config/config.py" beforeDir="false" afterPath="$PROJECT_DIR$/deepreaction/config/config.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/deepreaction/core/predictor.py" beforeDir="false" afterPath="$PROJECT_DIR$/deepreaction/core/predictor.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/deepreaction/core/trainer.py" beforeDir="false" afterPath="$PROJECT_DIR$/deepreaction/core/trainer.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/deepreaction/data/PygReaction.py" beforeDir="false" afterPath="$PROJECT_DIR$/deepreaction/data/PygReaction.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/deepreaction/data/dataset.py" beforeDir="false" afterPath="$PROJECT_DIR$/deepreaction/data/dataset.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/deepreaction/data/load_Reaction.py" beforeDir="false" afterPath="$PROJECT_DIR$/deepreaction/data/load_Reaction.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/deepreaction/model/dimenetplusplus.py" beforeDir="false" afterPath="$PROJECT_DIR$/deepreaction/model/dimenetplusplus.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/deepreaction/module/pl_wrap.py" beforeDir="false" afterPath="$PROJECT_DIR$/deepreaction/module/pl_wrap.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/example/train_reaction.py" beforeDir="false" afterPath="$PROJECT_DIR$/example/train_reaction.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test/train_reaction.py" beforeDir="false" afterPath="$PROJECT_DIR$/test/train_reaction.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -40,7 +48,7 @@
     &quot;RunOnceActivity.OpenProjectViewOnStart&quot;: &quot;true&quot;,
     &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
     &quot;git-widget-placeholder&quot;: &quot;main&quot;,
-    &quot;last_opened_file_path&quot;: &quot;/Users/user/Documents/GitHub/deepreaction/deep/cli&quot;,
+    &quot;last_opened_file_path&quot;: &quot;/Users/user/Documents/GitHub/DeepReaction/deep/utils&quot;,
     &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
     &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
     &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
@@ -52,10 +60,11 @@
 }</component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
-      <recent name="$PROJECT_DIR$/deep/cli" />
-      <recent name="$PROJECT_DIR$" />
-      <recent name="$PROJECT_DIR$/example" />
-      <recent name="$PROJECT_DIR$/test" />
+      <recent name="$PROJECT_DIR$/deep/utils" />
+      <recent name="$PROJECT_DIR$/deep/model" />
+      <recent name="$PROJECT_DIR$/deep/module" />
+      <recent name="$PROJECT_DIR$/deep/data" />
+      <recent name="$PROJECT_DIR$/deep/core" />
     </key>
     <key name="MoveFile.RECENT_KEYS">
       <recent name="$PROJECT_DIR$" />
@@ -112,7 +121,20 @@
       <workItem from="1744192140213" duration="585000" />
       <workItem from="1744207579768" duration="594000" />
       <workItem from="1744215854847" duration="593000" />
-      <workItem from="1744271182357" duration="738000" />
+      <workItem from="1744271182357" duration="1286000" />
+      <workItem from="1744304753717" duration="605000" />
+      <workItem from="1744363562352" duration="592000" />
+      <workItem from="1744367074269" duration="457000" />
+      <workItem from="1744367585412" duration="183000" />
+      <workItem from="1744374259368" duration="634000" />
+      <workItem from="1744729047667" duration="1370000" />
+      <workItem from="1744751495273" duration="598000" />
+      <workItem from="1744795457159" duration="1197000" />
+      <workItem from="1744880027189" duration="1229000" />
+      <workItem from="1745419735538" duration="3255000" />
+      <workItem from="1745431097548" duration="592000" />
+      <workItem from="1745497469712" duration="46000" />
+      <workItem from="1745499879424" duration="1875000" />
     </task>
     <servers />
   </component>
