@@ -113,7 +113,7 @@ To evaluate a trained model:
 ### Hyperparameter Optimization
 
 ```bash
-# Run hyperparameter optimization
+# Run hyperparameter optimization (grid_search)
 ./example/hyperopt.sh 
 ```
 
