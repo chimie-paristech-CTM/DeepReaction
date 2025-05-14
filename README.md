@@ -54,9 +54,9 @@ Alternatively, modify the paths in the configuration file or command-line argume
 
 To train the model with the dataset using our specialized training script:
 
-```bash
+```
 # Basic training with default parameters
-./example/train.sh
+./example/train_reaction.py
 ```
 
 ### Using Jupyter Notebook (Interactive)
@@ -67,10 +67,10 @@ We provide an interactive Jupyter notebook for easier experimentation and visual
 # Start Jupyter notebook server
 jupyter lab
 
-# Navigate to example/train_demo.ipynb
+# Navigate to example/train_reaction.ipynb
 ```
 
-The notebook `example/train_demo.ipynb` offers a streamlined interface for:
+The notebook `example/train_reaction.ipynb` offers a streamlined interface for:
 - Loading and exploring the reaction dataset
 - Configuring model architecture and training parameters
 - Training with real-time visualization of progress
@@ -96,25 +96,19 @@ This is particularly useful for quick experimentation and educational purposes, 
 
 To evaluate a trained model:
 
-```bash
+```
 # Basic evaluation
-./example/inference.sh
+./example/predict_reaction.ipynb
 ```
 
 ## 🔧 Advanced Usage
 
-### Fine-tuning Pre-trained Models
-
-```bash
-# Fine-tune a pre-trained model on new data
-./example/finetune.sh 
-```
 
 ### Hyperparameter Optimization
 
 ```bash
 # Run hyperparameter optimization
-./example/hyperopt.sh 
+./example/hyperopt_grid.py
 ```
 
 ## 📝 Citation
