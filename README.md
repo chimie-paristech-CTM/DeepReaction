@@ -12,7 +12,7 @@
 
 This repository corresponds to the DeepReaction project.
 
-## 🚀 Getting Started
+
 
 ### Installation
 
@@ -21,22 +21,23 @@ This repository corresponds to the DeepReaction project.
 git clone https://github.com/chimie-paristech-CTM/DeepReaction.git
 cd DeepReaction
 
-# Create and activate the environment
-conda create -n reaction python=3.10
-conda activate reaction
-
-# Install PyTorch with CUDA support
-conda install pytorch==2.5.0 torchvision==0.20.0 torchaudio==2.5.0 -c pytorch
-
-# Install PyTorch Geometric
-conda install pyg -c pyg
-
-# Install other dependencies
+# Create the conda environment from the environment.yml file
 conda env create -f environment.yml
 
-# For Jupyter notebook functionality
+# Activate the environment
+conda activate reaction
+
+# (Optional) For Jupyter notebook support
 pip install jupyterlab
 ```
+
+> ⚠️ **Note:** The version of **PyTorch Geometric (PyG)** and its related packages must be selected according to your hardware configuration (e.g., CUDA version).
+> Visit the official [PyG installation guide](https://pytorch-geometric.readthedocs.io/en/latest/notes/installation.html) to find the correct command for your system.
+> If needed, you can manually install PyG with:
+>
+
+
+
 
 ### Dataset Preparation
 

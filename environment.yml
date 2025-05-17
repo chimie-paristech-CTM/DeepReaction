@@ -1,6 +1,6 @@
 name: reaction
 channels:
-  - pytorch
+  - defaults
   - conda-forge
 dependencies:
   - python=3.10
@@ -11,20 +11,18 @@ dependencies:
   - sympy
   - ipykernel
   - jupyterlab
-  - pytorch=2.4.0
-  - cudatoolkit=12.4
   - pytorch-lightning
-  - pytorch-geometric
   - tensorboard
   - wandb
-  - pip
   - seaborn
-  - ray
   - optuna
-  - "ray[tune]"
+  - rdkit
+  - pip
   - pip:
+      - ray
+      - "ray[tune]"
+      - --find-links https://data.pyg.org/whl/torch-2.4.0+cu124.html
       - torch-scatter
       - torch-sparse
       - torch-cluster
       - torch-spline-conv
-      - torch-geometric

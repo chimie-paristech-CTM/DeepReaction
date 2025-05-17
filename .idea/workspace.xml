@@ -6,16 +6,8 @@
   <component name="ChangeListManager">
     <list default="true" id="94731d45-201e-4dbc-a4e7-9a36e7716e22" name="更改" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/deepreaction/config/config.py" beforeDir="false" afterPath="$PROJECT_DIR$/deepreaction/config/config.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/deepreaction/core/predictor.py" beforeDir="false" afterPath="$PROJECT_DIR$/deepreaction/core/predictor.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/deepreaction/core/trainer.py" beforeDir="false" afterPath="$PROJECT_DIR$/deepreaction/core/trainer.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/deepreaction/data/PygReaction.py" beforeDir="false" afterPath="$PROJECT_DIR$/deepreaction/data/PygReaction.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/deepreaction/data/dataset.py" beforeDir="false" afterPath="$PROJECT_DIR$/deepreaction/data/dataset.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/deepreaction/data/load_Reaction.py" beforeDir="false" afterPath="$PROJECT_DIR$/deepreaction/data/load_Reaction.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/deepreaction/model/dimenetplusplus.py" beforeDir="false" afterPath="$PROJECT_DIR$/deepreaction/model/dimenetplusplus.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/deepreaction/module/pl_wrap.py" beforeDir="false" afterPath="$PROJECT_DIR$/deepreaction/module/pl_wrap.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/example/train_reaction.py" beforeDir="false" afterPath="$PROJECT_DIR$/example/train_reaction.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/test/train_reaction.py" beforeDir="false" afterPath="$PROJECT_DIR$/test/train_reaction.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/environment.yml" beforeDir="false" afterPath="$PROJECT_DIR$/environment.yml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -135,6 +127,8 @@
       <workItem from="1745431097548" duration="592000" />
       <workItem from="1745497469712" duration="46000" />
       <workItem from="1745499879424" duration="1875000" />
+      <workItem from="1747456835311" duration="2070000" />
+      <workItem from="1747468246450" duration="1003000" />
     </task>
     <servers />
   </component>
