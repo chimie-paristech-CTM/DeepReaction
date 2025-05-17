@@ -11,7 +11,7 @@ dependencies:
   - sympy
   - ipykernel
   - jupyterlab
-  - pytorch=2.5.0
+  - pytorch=2.4.0
   - cudatoolkit=12.4
   - pytorch-lightning
   - pytorch-geometric
