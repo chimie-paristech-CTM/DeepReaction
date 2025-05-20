@@ -100,6 +100,20 @@ def main():
 
     os.makedirs(args.out_dir, exist_ok=True)
 
+    # Verify target fields and weights match
+    if len(args.target_weights) != len(args.target_fields):
+        print(f"Warning: Number of target weights ({len(args.target_weights)}) does not match number of target fields ({len(args.target_fields)})")
+        print("Adjusting target weights to match target fields...")
+        if len(args.target_weights) < len(args.target_fields):
+            args.target_weights.extend([1.0] * (len(args.target_fields) - len(args.target_weights)))
+        else:
+            args.target_weights = args.target_weights[:len(args.target_fields)]
+        print(f"Adjusted target weights: {args.target_weights}")
+
+    # Print training targets for verification
+    print(f"Training with {len(args.target_fields)} targets: {args.target_fields}")
+    print(f"Target weights: {args.target_weights}")
+
     reaction_config = ReactionConfig(
         dataset_root=args.dataset_root,
         dataset_csv=args.dataset_csv,
@@ -144,6 +158,10 @@ def main():
         prediction_hidden_layers=args.prediction_hidden_layers,
         prediction_hidden_dim=args.prediction_hidden_dim
     )
+
+    # Explicitly set the number of output dimensions to match target fields
+    num_targets = len(args.target_fields)
+    print(f"Setting model output dimension to {num_targets}")
 
     training_config = TrainingConfig(
         output_dir=args.out_dir,
@@ -225,6 +243,9 @@ def main():
     if args.freeze_base_model:
         additional_kwargs['freeze_base_model'] = True
 
+    print(f"Creating trainer with {len(args.target_fields)} targets: {args.target_fields}")
+    print(f"Target weights: {args.target_weights}")
+
     trainer = ReactionTrainer(
         model_type=args.model_type,
         readout=args.readout,
@@ -236,7 +257,7 @@ def main():
         save_best_model=args.save_best_model,
         save_last_model=args.save_last_model,
         random_seed=args.random_seed,
-        num_targets=len(args.target_fields),
+        num_targets=len(args.target_fields),  # 关键修复: 明确传递目标数量
         use_scaler=args.use_scaler,
         scalers=dataset.get_scalers(),
         optimizer=args.optimizer,
@@ -248,7 +269,7 @@ def main():
         node_dim=args.node_dim,
         dropout=args.dropout,
         use_layer_norm=args.use_layer_norm,
-        target_field_names=args.target_fields,
+        target_field_names=args.target_fields,  # 显式传递目标字段名称
         use_xtb_features=len(args.input_features) > 0,
         num_xtb_features=len(args.input_features),
         prediction_hidden_layers=args.prediction_hidden_layers,
@@ -268,6 +289,7 @@ def main():
         num_output_layers=args.num_output_layers,
         max_num_neighbors=args.max_num_neighbors,
         num_workers=args.num_workers,
+        target_weights=args.target_weights,  # 确保传递目标权重
         **additional_kwargs
     )
 

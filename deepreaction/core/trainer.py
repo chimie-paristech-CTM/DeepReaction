@@ -155,6 +155,7 @@ class ReactionTrainer:
     def create_model(self):
         from ..module.pl_wrap import Estimator
 
+        # 确保明确传递 num_targets 参数
         model_config = {
             'model_type': self.model_type,
             'readout': self.readout,
@@ -176,7 +177,8 @@ class ReactionTrainer:
             'num_xtb_features': self.num_xtb_features,
             'prediction_hidden_layers': self.prediction_hidden_layers,
             'prediction_hidden_dim': self.prediction_hidden_dim,
-            'target_field_names': self.target_field_names
+            'target_field_names': self.target_field_names,
+            'num_targets': self.num_targets  # 关键修复: 明确传递 num_targets
         }
 
         model_kwargs = {}

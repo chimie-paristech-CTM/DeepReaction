@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 import os
 import sys
 import argparse
@@ -20,7 +21,7 @@ def get_parser():
     parser.add_argument('--val_ratio', type=float, default=0.1, help='Validation set ratio')
     parser.add_argument('--test_ratio', type=float, default=0.1, help='Test set ratio')
     parser.add_argument('--target_fields', type=str, nargs='+', default=['G(TS)', 'DrG'], help='Target fields')
-    parser.add_argument('--target_weights', type=float, nargs='+', default=[1.0, 1.0], help='Target weights')
+    parser.add_argument('--target_weights', type=float, nargs='+', default=None, help='Target weights (will be set to match number of targets)')
     parser.add_argument('--input_features', type=str, nargs='+', default=['G(TS)_xtb', 'DrG_xtb'],
                         help='Input features')
     parser.add_argument('--file_patterns', type=str, nargs='+', default=['*_reactant.xyz', '*_ts.xyz', '*_product.xyz'],
@@ -81,6 +82,8 @@ def get_parser():
     parser.add_argument('--num_workers', type=int, default=4, help='Number of data loading workers')
     parser.add_argument('--use_scaler', action='store_true', default=False, help='Use scaler for target normalization')
     parser.add_argument('--cpu_cores', type=int, default=1, help='Number of CPU cores to use when not using GPU')
+    parser.add_argument('--force_reload', action='store_true', default=False, help='Force reload dataset')
+    parser.add_argument('--debug', action='store_true', default=False, help='Enable debug output')
 
     return parser
 
@@ -88,6 +91,15 @@ def get_parser():
 def main():
     parser = get_parser()
     args = parser.parse_args()
+
+    if args.target_weights is None or len(args.target_weights) != len(args.target_fields):
+        args.target_weights = [1.0] * len(args.target_fields)
+
+    if args.debug:
+        print(f"Target fields: {args.target_fields}")
+        print(f"Number of target fields: {len(args.target_fields)}")
+        print(f"Target weights: {args.target_weights}")
+        print(f"Number of target weights: {len(args.target_weights)}")
 
     if args.cuda and torch.cuda.is_available():
         os.environ["CUDA_VISIBLE_DEVICES"] = str(args.gpu_id)
@@ -117,7 +129,8 @@ def main():
         id_field=args.id_field,
         dir_field=args.dir_field,
         reaction_field=args.reaction_field,
-        random_seed=args.random_seed
+        random_seed=args.random_seed,
+        force_reload=args.force_reload
     )
 
     model_config = ModelConfig(
@@ -190,13 +203,25 @@ def main():
         cv_folds=args.cv_folds,
         id_field=args.id_field,
         dir_field=args.dir_field,
-        reaction_field=args.reaction_field
+        reaction_field=args.reaction_field,
+        force_reload=args.force_reload
     )
 
     print("Dataset loaded successfully")
     data_stats = dataset.get_data_stats()
     print(
         f"Dataset stats: Train: {data_stats['train_size']}, Validation: {data_stats['val_size']}, Test: {data_stats['test_size']}")
+    print(f"Target fields: {data_stats['target_fields']}")
+
+    if args.debug:
+        train_data = dataset.get_train_data()
+        if train_data and len(train_data) > 0:
+            sample_data = train_data[0]
+            print(f"Sample data target shape: {sample_data.y.shape}")
+            print(f"Sample data target values: {sample_data.y}")
+            if hasattr(sample_data, 'xtb_features'):
+                print(f"Sample data input features shape: {sample_data.xtb_features.shape}")
+                print(f"Sample data input features: {sample_data.xtb_features}")
 
     model_params = {
         "model_type": args.model_type,
@@ -224,8 +249,10 @@ def main():
         additional_kwargs['finetune_lr'] = args.finetune_lr
     if args.freeze_base_model:
         additional_kwargs['freeze_base_model'] = True
-    # Pass the CPU cores parameter to the trainer
     additional_kwargs['cpu_cores'] = args.cpu_cores
+
+    print(f"Creating trainer with {len(args.target_fields)} targets: {args.target_fields}")
+    print(f"Target weights: {args.target_weights}")
 
     trainer = ReactionTrainer(
         model_type=args.model_type,
@@ -270,6 +297,7 @@ def main():
         num_output_layers=args.num_output_layers,
         max_num_neighbors=args.max_num_neighbors,
         num_workers=args.num_workers,
+        target_weights=args.target_weights,
         **additional_kwargs
     )
 
