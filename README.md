@@ -16,6 +16,7 @@ This repository corresponds to the DeepReaction project, designed for accurate p
 
 - [Installation](#installation)
 - [Data Format](#data-format)
+- [Dataset](#dataset)
 - [Dataset Preparation](#dataset-preparation)
 - [Training](#training)
 - [Evaluation](#evaluation)
@@ -109,6 +110,27 @@ When setting up your configuration, make sure to specify:
 - `dir_field`: Column name for directory names (default: `'R_dir'`)
 - `reaction_field`: Column name for reaction SMILES (default: `'reaction'`)
 
+## 🔍 Dataset
+
+### Diels-Alder Reaction Dataset
+
+The models in DeepReaction were developed and tested using a comprehensive Diels-Alder reaction dataset:
+
+**Dataset link:** [Diels-Alder Reaction Space for Self-Healing Polymer](https://figshare.com/articles/dataset/Diels-Alder_reaction_space_for_self-healing_polymer/29118509?file=54702098)
+
+This dataset contains:
+- 1,580+ Diels-Alder reactions with complete 3D structures
+- Quantum chemical calculations (DFT and XTB) for transition states and energetics
+- Reaction energies, activation energies, and structural information
+- Computed properties including G(TS) and DrG values
+
+### Download and Use
+
+1. Download the dataset archive from the Figshare link above
+2. Extract the contents to your desired location (recommended: `./dataset/DATASET_DA_F/`)
+3. Ensure the dataset has the correct structure as described in the [XYZ File Structure](#xyz-file-structure) section
+4. Update the dataset paths in your configuration if needed
+
 ## 📁 Dataset Preparation
 
 Place your reaction dataset in the appropriate location:
@@ -188,6 +210,8 @@ The prediction notebook allows you to:
 ```
 
 ## 📝 Citation
+
+If you use DeepReaction or the Diels-Alder dataset in your research, please cite:
 
 ```
 [Placeholder]
