@@ -152,28 +152,6 @@ To train the model with the dataset using our specialized training script:
 ./example/train_reaction.py
 ```
 
-### Using Jupyter Notebook (Interactive)
-
-We provide an interactive Jupyter notebook for easier experimentation and visualization:
-
-```bash
-# Start Jupyter notebook server
-jupyter lab
-
-# Navigate to example/train_reaction.ipynb
-```
-
-The notebook `example/train_reaction.ipynb` offers a streamlined interface for:
-- Loading and exploring the reaction dataset
-- Configuring model architecture and training parameters
-- Training with real-time visualization of progress
-- Evaluating model performance with interactive visualizations
-
-This is particularly useful for quick experimentation and educational purposes, allowing you to:
-- Modify hyperparameters and immediately see their effects
-- Visualize the training process and results in real-time
-- Interact with model predictions and understand performance characteristics
-
 ### Available command line options
 
 - `--readout`: Readout function type (set_transformer, sum, mean, max, attention)
