@@ -5,17 +5,9 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="94731d45-201e-4dbc-a4e7-9a36e7716e22" name="更改" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/csv-editor.xml" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/deepreaction/core/trainer.py" beforeDir="false" afterPath="$PROJECT_DIR$/deepreaction/core/trainer.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/deepreaction/model/model.py" beforeDir="false" afterPath="$PROJECT_DIR$/deepreaction/model/model.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/deepreaction/module/pl_wrap.py" beforeDir="false" afterPath="$PROJECT_DIR$/deepreaction/module/pl_wrap.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/predict_reaction.py" beforeDir="false" afterPath="$PROJECT_DIR$/predict_reaction.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/predict_reaction_cpu.py" beforeDir="false" afterPath="$PROJECT_DIR$/predict_reaction_cpu.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/predictions.csv" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/train.sh" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/train_reaction.py" beforeDir="false" afterPath="$PROJECT_DIR$/train_reaction.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/train_reaction_cpu.py" beforeDir="false" afterPath="$PROJECT_DIR$/train_reaction_cpu.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/train_single.sh" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -138,7 +130,9 @@
       <workItem from="1747456835311" duration="2070000" />
       <workItem from="1747468246450" duration="1194000" />
       <workItem from="1747474322351" duration="1198000" />
-      <workItem from="1747729665849" duration="3233000" />
+      <workItem from="1747729665849" duration="6417000" />
+      <workItem from="1747758441178" duration="1253000" />
+      <workItem from="1747800602971" duration="1191000" />
     </task>
     <servers />
   </component>

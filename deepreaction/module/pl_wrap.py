@@ -88,14 +88,14 @@ class Estimator(pl.LightningModule):
         self.warmup_epochs = warmup_epochs
         self.min_lr = min_lr
         self.loss_function = loss_function
-
+        
         if target_weights is None or len(target_weights) != self.num_targets:
             self.target_weights = [1.0] * self.num_targets
             print(f"Setting default target weights: {self.target_weights}")
         else:
             self.target_weights = target_weights
             print(f"Using provided target weights: {self.target_weights}")
-
+            
         self.uncertainty_method = uncertainty_method
         self.gradient_clip_val = gradient_clip_val
         self.model_kwargs = model_kwargs if model_kwargs is not None else {}
@@ -112,9 +112,8 @@ class Estimator(pl.LightningModule):
         self.test_metrics = {}
 
         if not self.target_field_names or len(self.target_field_names) != self.num_targets:
-            print(
-                f"Warning: target_field_names length ({len(self.target_field_names) if self.target_field_names else 0}) "
-                f"doesn't match num_targets ({self.num_targets})")
+            print(f"Warning: target_field_names length ({len(self.target_field_names) if self.target_field_names else 0}) "
+                  f"doesn't match num_targets ({self.num_targets})")
             self.target_field_names = [f"target_{i}" for i in range(self.num_targets)]
             print(f"Using default target field names: {self.target_field_names}")
         else:
@@ -152,10 +151,7 @@ class Estimator(pl.LightningModule):
 
     def forward(self, pos0, pos1, pos2, z0, z1, z2, batch_mapping, xtb_features=None):
         is_training = hasattr(self, 'trainer') and self.trainer is not None
-
-        if not hasattr(self, 'forward_debug') and is_training and self.trainer.current_epoch == 0:
-            self.forward_debug = True
-
+                   
         return self.model(pos0, pos1, pos2, z0, z1, z2, batch_mapping, xtb_features)
 
     def configure_optimizers(self):
@@ -232,10 +228,10 @@ class Estimator(pl.LightningModule):
 
     def _batch_loss(self, pos0, pos1, pos2, y, z0, z1, z2, batch_mapping, xtb_features=None):
         is_training = hasattr(self, 'trainer') and self.trainer is not None
-
+        
         if not hasattr(self, 'batch_loss_debug') and is_training and self.trainer.current_epoch == 0:
             self.batch_loss_debug = True
-
+            
         _, graph_embeddings, predictions = self.forward(
             pos0, pos1, pos2, z0, z1, z2, batch_mapping, xtb_features
         )
@@ -247,12 +243,12 @@ class Estimator(pl.LightningModule):
 
         total_loss = 0.0
         individual_losses = []
-
+        
         effective_targets = min(predictions.shape[1], y.shape[1], self.num_targets)
         if effective_targets != self.num_targets and is_training and not hasattr(self, 'targets_warning_printed'):
             print(f"WARNING: Using {effective_targets} targets instead of configured {self.num_targets}")
             self.targets_warning_printed = True
-
+            
         for i in range(effective_targets):
             target_weight = self.target_weights[i] if i < len(self.target_weights) else 1.0
 
@@ -281,7 +277,7 @@ class Estimator(pl.LightningModule):
         xtb_features = getattr(batch, 'xtb_features', None)
 
         is_training = hasattr(self, 'trainer') and self.trainer is not None
-
+        
         if not hasattr(self, f'{step_type}_debug') and is_training and self.trainer.current_epoch == 0:
             if y.shape[1] != self.num_targets:
                 print(f"WARNING: y shape {y.shape} doesn't match num_targets {self.num_targets}")
@@ -325,7 +321,7 @@ class Estimator(pl.LightningModule):
 
     def _epoch_end_report(self, epoch_outputs, epoch_type):
         is_training = hasattr(self, 'trainer') and self.trainer is not None
-
+        
         preds = torch.cat([out[0] for out in epoch_outputs], dim=0)
         trues = torch.cat([out[1] for out in epoch_outputs], dim=0)
 

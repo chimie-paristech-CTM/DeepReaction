@@ -45,6 +45,7 @@ class Estimator(pl.LightningModule):
             prediction_hidden_layers: int = 3,
             prediction_hidden_dim: int = 128,
             target_field_names: List[str] = None,
+            num_targets: int = None,
             **kwargs
     ):
         super().__init__()
@@ -62,11 +63,22 @@ class Estimator(pl.LightningModule):
         self.dropout = dropout
         self.monitor_loss = monitor_loss
         self.name = name
-        self.num_targets = len(self.scaler) if isinstance(self.scaler, list) else 1
         self.use_xtb_features = use_xtb_features
         self.num_xtb_features = num_xtb_features
         self.prediction_hidden_layers = prediction_hidden_layers
         self.prediction_hidden_dim = prediction_hidden_dim
+        self.target_field_names = target_field_names or []
+        self.is_training = False
+
+        if num_targets is not None:
+            self.num_targets = num_targets
+            print(f"Using explicitly provided num_targets: {self.num_targets}")
+        elif target_field_names and len(target_field_names) > 0:
+            self.num_targets = len(target_field_names)
+            print(f"Using num_targets from target_field_names: {self.num_targets}")
+        else:
+            self.num_targets = len(self.scaler) if isinstance(self.scaler, list) else 1
+            print(f"Using num_targets from scaler: {self.num_targets}")
 
         self.optimizer_type = optimizer
         self.weight_decay = weight_decay
@@ -76,7 +88,14 @@ class Estimator(pl.LightningModule):
         self.warmup_epochs = warmup_epochs
         self.min_lr = min_lr
         self.loss_function = loss_function
-        self.target_weights = target_weights if target_weights is not None else [1.0] * self.num_targets
+        
+        if target_weights is None or len(target_weights) != self.num_targets:
+            self.target_weights = [1.0] * self.num_targets
+            print(f"Setting default target weights: {self.target_weights}")
+        else:
+            self.target_weights = target_weights
+            print(f"Using provided target weights: {self.target_weights}")
+            
         self.uncertainty_method = uncertainty_method
         self.gradient_clip_val = gradient_clip_val
         self.model_kwargs = model_kwargs if model_kwargs is not None else {}
@@ -91,13 +110,25 @@ class Estimator(pl.LightningModule):
         self.train_metrics = {}
         self.val_metrics = {}
         self.test_metrics = {}
-        self.target_field_names = target_field_names
+
+        if not self.target_field_names or len(self.target_field_names) != self.num_targets:
+            print(f"Warning: target_field_names length ({len(self.target_field_names) if self.target_field_names else 0}) "
+                  f"doesn't match num_targets ({self.num_targets})")
+            self.target_field_names = [f"target_{i}" for i in range(self.num_targets)]
+            print(f"Using default target field names: {self.target_field_names}")
+        else:
+            print(f"Using target field names: {self.target_field_names}")
+
+        print(f"Final model configuration: num_targets={self.num_targets}, "
+              f"target_field_names={self.target_field_names}, "
+              f"target_weights={self.target_weights}")
 
         self._init_model()
 
     def _init_model(self):
         from ..model.model import MoleculePredictionModel
 
+        print(f"Initializing model with output_dim={self.num_targets}")
         self.model = MoleculePredictionModel(
             model_type=self.model_type,
             readout_type=self.readout,
@@ -119,24 +150,8 @@ class Estimator(pl.LightningModule):
         self.regr_or_cls_nn = self.model.prediction_mlp
 
     def forward(self, pos0, pos1, pos2, z0, z1, z2, batch_mapping, xtb_features=None):
-        # # Print shapes
-        # print("--- Input Shapes ---")
-        # print(f"pos0 shape: {pos0.shape}")
-        # print(f"pos1 shape: {pos1.shape}")
-        # print(f"pos2 shape: {pos2.shape}")
-        # print(f"z0 shape: {z0.shape}")
-        # print(f"z1 shape: {z1.shape}")
-        # print(f"z2 shape: {z2.shape}")
-
-        # print("\n--- Input Content (Sample) ---")
-        # print(f"pos0 content:\n{pos0}")
-        # print(f"pos1 content:\n{pos1}")
-        # print(f"pos2 content:\n{pos2}")
-        # print(f"z0 content:\n{z0}")
-        # print(f"z1 content:\n{z1}")
-        # print(f"z2 content:\n{z2}")
-        # print("-" * 20) # Separator
-
+        is_training = hasattr(self, 'trainer') and self.trainer is not None
+                   
         return self.model(pos0, pos1, pos2, z0, z1, z2, batch_mapping, xtb_features)
 
     def configure_optimizers(self):
@@ -212,12 +227,29 @@ class Estimator(pl.LightningModule):
         return {'optimizer': optimizer, 'lr_scheduler': scheduler_config, 'monitor': self.monitor_loss}
 
     def _batch_loss(self, pos0, pos1, pos2, y, z0, z1, z2, batch_mapping, xtb_features=None):
+        is_training = hasattr(self, 'trainer') and self.trainer is not None
+        
+        if not hasattr(self, 'batch_loss_debug') and is_training and self.trainer.current_epoch == 0:
+            self.batch_loss_debug = True
+            
         _, graph_embeddings, predictions = self.forward(
             pos0, pos1, pos2, z0, z1, z2, batch_mapping, xtb_features
         )
 
+        if not hasattr(self, 'predictions_debug') and is_training and self.trainer.current_epoch == 0:
+            if predictions.shape[1] != self.num_targets:
+                print(f"WARNING: predictions shape {predictions.shape[1]} doesn't match num_targets {self.num_targets}")
+            self.predictions_debug = True
+
         total_loss = 0.0
-        for i in range(self.num_targets):
+        individual_losses = []
+        
+        effective_targets = min(predictions.shape[1], y.shape[1], self.num_targets)
+        if effective_targets != self.num_targets and is_training and not hasattr(self, 'targets_warning_printed'):
+            print(f"WARNING: Using {effective_targets} targets instead of configured {self.num_targets}")
+            self.targets_warning_printed = True
+            
+        for i in range(effective_targets):
             target_weight = self.target_weights[i] if i < len(self.target_weights) else 1.0
 
             if self.loss_function == 'mse':
@@ -231,7 +263,11 @@ class Estimator(pl.LightningModule):
             else:
                 loss = F.l1_loss(predictions[:, i], y[:, i])
 
+            individual_losses.append(loss.item())
             total_loss += target_weight * loss
+
+        if not hasattr(self, 'loss_debug') and is_training and self.trainer.current_epoch == 0:
+            self.loss_debug = True
 
         return total_loss, graph_embeddings, predictions
 
@@ -240,9 +276,19 @@ class Estimator(pl.LightningModule):
         z0, z1, z2, batch_mapping = batch.z0, batch.z1, batch.z2, batch.batch
         xtb_features = getattr(batch, 'xtb_features', None)
 
+        is_training = hasattr(self, 'trainer') and self.trainer is not None
+        
+        if not hasattr(self, f'{step_type}_debug') and is_training and self.trainer.current_epoch == 0:
+            if y.shape[1] != self.num_targets:
+                print(f"WARNING: y shape {y.shape} doesn't match num_targets {self.num_targets}")
+            setattr(self, f'{step_type}_debug', True)
+
         total_loss, _, predictions = self._batch_loss(
             pos0, pos1, pos2, y, z0, z1, z2, batch_mapping, xtb_features
         )
+
+        if not hasattr(self, f'{step_type}_pred_debug') and is_training and self.trainer.current_epoch == 0:
+            setattr(self, f'{step_type}_pred_debug', True)
 
         output = (predictions.detach(), y.detach())
         if step_type == 'train':
@@ -256,6 +302,7 @@ class Estimator(pl.LightningModule):
         return total_loss
 
     def training_step(self, batch, batch_idx):
+        self.is_training = True
         train_total_loss = self._step(batch, 'train')
         self.log('train_total_loss', train_total_loss, batch_size=self.batch_size, on_step=True, on_epoch=True,
                  prog_bar=True)
@@ -273,18 +320,25 @@ class Estimator(pl.LightningModule):
         return test_total_loss
 
     def _epoch_end_report(self, epoch_outputs, epoch_type):
+        is_training = hasattr(self, 'trainer') and self.trainer is not None
+        
         preds = torch.cat([out[0] for out in epoch_outputs], dim=0)
         trues = torch.cat([out[1] for out in epoch_outputs], dim=0)
 
         y_pred_np = preds.cpu().numpy()
         y_true_np = trues.cpu().numpy()
 
+        effective_targets = min(y_pred_np.shape[1], y_true_np.shape[1], self.num_targets)
+        if effective_targets != self.num_targets and not hasattr(self, 'metrics_warning_printed'):
+            print(f"WARNING: Using {effective_targets} targets for metrics instead of configured {self.num_targets}")
+            self.metrics_warning_printed = True
+
         all_metrics = []
         target_metrics = {}
 
         metrics_to_compute = ['mae', 'rmse', 'r2', 'mpae', 'max_ae', 'median_ae']
 
-        for i in range(self.num_targets):
+        for i in range(effective_targets):
             y_pred_target = y_pred_np[:, i].reshape(-1, 1)
             y_true_target = y_true_np[:, i].reshape(-1, 1)
 
@@ -333,6 +387,16 @@ class Estimator(pl.LightningModule):
         self.log(f'{epoch_type} Avg MEDIAN_AE', avg_median_ae, batch_size=self.batch_size)
 
         return target_metrics, y_pred_np, y_true_np
+
+    def on_train_epoch_end(self):
+        if self.current_epoch in self.train_output and len(self.train_output[self.current_epoch]) > 0:
+            metrics, _, _ = self._epoch_end_report(self.train_output[self.current_epoch], epoch_type='Train')
+            self.train_metrics[self.current_epoch] = metrics
+
+    def on_validation_epoch_end(self):
+        if self.current_epoch in self.val_output and len(self.val_output[self.current_epoch]) > 0:
+            metrics, _, _ = self._epoch_end_report(self.val_output[self.current_epoch], epoch_type='Val')
+            self.val_metrics[self.current_epoch] = metrics
 
     def on_test_epoch_end(self):
         if self.num_called_test in self.test_output and len(self.test_output[self.num_called_test]) > 0:

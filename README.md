@@ -10,11 +10,21 @@
 [![PyTorch](https://img.shields.io/badge/PyTorch-2.5.0-orange.svg)](https://pytorch.org/)
 [![PyG](https://img.shields.io/badge/PyG-latest-red.svg)](https://pytorch-geometric.readthedocs.io/)
 
-This repository corresponds to the DeepReaction project.
+This repository corresponds to the DeepReaction project, designed for accurate prediction of chemical reaction properties using graph neural networks.
 
+## 📋 Table of Contents
 
+- [Installation](#installation)
+- [Data Format](#data-format)
+- [Dataset Preparation](#dataset-preparation)
+- [Training](#training)
+- [Evaluation](#evaluation)
+- [Advanced Usage](#advanced-usage)
+- [Citation](#citation)
+- [Acknowledgements](#acknowledgements)
+- [License](#license)
 
-### Installation
+## 🔧 Installation
 
 ```bash
 # Clone this repository:
@@ -33,13 +43,73 @@ pip install jupyterlab
 
 > ⚠️ **Note:** The version of **PyTorch Geometric (PyG)** and its related packages must be selected according to your hardware configuration (e.g., CUDA version).
 > Visit the official [PyG installation guide](https://pytorch-geometric.readthedocs.io/en/latest/notes/installation.html) to find the correct command for your system.
-> If needed, you can manually install PyG with:
->
 
+## 📊 Data Format
 
+DeepReaction requires a specific data format for training and prediction. The key components are:
 
+### CSV Input Format
 
-### Dataset Preparation
+Your main dataset file should be a CSV with the following essential columns:
+
+| Column | Description |
+|--------|-------------|
+| `ID` | Unique identifier for each reaction |
+| `R_dir` | Directory name containing XYZ files (e.g., "reaction_R0") |
+| `reaction` | SMILES representation of the reaction |
+| `G(TS)` | Target property: Gibbs free energy of transition state (kcal/mol) |
+| `DrG` | Target property: Reaction free energy change (kcal/mol) |
+| `G(TS)_xtb` | Input feature: XTB-computed approximation of G(TS) |
+| `DrG_xtb` | Input feature: XTB-computed approximation of DrG |
+
+#### Example CSV row:
+```
+ID63623,reaction_R0,[C:1](=[C:2]([C:3](=[C:4]([H:11])[H:12])[H:10])[H:9])([H:7])[H:8].[C:5](=[C:6]([H:15])[H:16])([H:13])[H:14]>>[C:1]1([H:7])([H:8])[C:2]([H:9])=[C:3]([H:10])[C:4]([H:11])([H:12])[C:5]([H:13])([H:14])[C:6]1([H:15])[H:16],35.16,-22.54,21.70,-44.40
+```
+
+### XYZ File Structure
+
+For each reaction in your dataset, you need to provide three XYZ files representing the:
+1. Reactant(s)
+2. Transition state (TS)
+3. Product(s)
+
+The XYZ files should be organized in directories named according to the `R_dir` column in your CSV:
+
+```
+dataset_root/
+└── reaction_R0/
+    ├── R0_reactant.xyz
+    ├── R0_ts.xyz
+    └── R0_product.xyz
+└── reaction_R1/
+    ├── R1_reactant.xyz
+    ├── R1_ts.xyz
+    └── R1_product.xyz
+...
+```
+
+#### XYZ File Format:
+```
+[Number of atoms]
+[Optional comment line]
+[Element] [X coordinate] [Y coordinate] [Z coordinate]
+[Element] [X coordinate] [Y coordinate] [Z coordinate]
+...
+```
+
+### Important Configuration Parameters
+
+When setting up your configuration, make sure to specify:
+
+- `file_patterns`: Patterns to identify XYZ files (default: `['*_reactant.xyz', '*_ts.xyz', '*_product.xyz']`)
+- `target_fields`: Target properties to predict (default: `['G(TS)', 'DrG']`)
+- `input_features`: Features used as input (default: `['G(TS)_xtb', 'DrG_xtb']`)
+- `id_field`: Column name for reaction IDs (default: `'ID'`)
+- `dir_field`: Column name for directory names (default: `'R_dir'`)
+- `reaction_field`: Column name for reaction SMILES (default: `'reaction'`)
+
+## 📁 Dataset Preparation
 
 Place your reaction dataset in the appropriate location:
 
@@ -98,12 +168,17 @@ This is particularly useful for quick experimentation and educational purposes, 
 To evaluate a trained model:
 
 ```
-# Basic evaluation
-./example/predict_reaction.ipynb
+# Run prediction notebook
+jupyter lab example/predict_reaction.ipynb
 ```
 
-## 🔧 Advanced Usage
+The prediction notebook allows you to:
+- Load a trained model checkpoint
+- Make predictions on new data
+- Visualize prediction results
+- Compare predictions with actual values (if available)
 
+## 🔧 Advanced Usage
 
 ### Hyperparameter Optimization
 
