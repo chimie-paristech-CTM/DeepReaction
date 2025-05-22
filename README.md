@@ -27,6 +27,24 @@ This repository corresponds to the DeepReaction project, designed for accurate p
 
 ## 🔧 Installation
 
+**[UPDATED]** We recommend two installation methods:
+
+### Method 1: Using pip (Recommended)
+
+```bash
+# Clone this repository:
+git clone https://github.com/chimie-paristech-CTM/DeepReaction.git
+cd DeepReaction
+
+# Install in development mode
+pip install -e .
+
+# (Optional) For Jupyter notebook support
+pip install jupyterlab
+```
+
+### Method 2: Using conda environment
+
 ```bash
 # Clone this repository:
 git clone https://github.com/chimie-paristech-CTM/DeepReaction.git
@@ -58,9 +76,9 @@ Your main dataset file should be a CSV with the following essential columns:
 | `ID` | Unique identifier for each reaction |
 | `R_dir` | Directory name containing XYZ files (e.g., "reaction_R0") |
 | `reaction` | SMILES representation of the reaction |
-| `G(TS)` | Target property: Gibbs free energy of transition state (kcal/mol) |
-| `DrG` | Target property: Reaction free energy change (kcal/mol) |
-| `G(TS)_xtb` | Input feature: XTB-computed approximation of G(TS) |
+| `DG_act` | **[CHANGED]** Target property: Gibbs free activation energy (kcal/mol) |
+| `DrG` | **[CHANGED]** Target property: Gibbs free reaction energy (kcal/mol) |
+| `DG_act_xtb` | **[CHANGED]** Input feature: XTB-computed approximation of DG_act |
 | `DrG_xtb` | Input feature: XTB-computed approximation of DrG |
 
 #### Example CSV row:
@@ -104,8 +122,8 @@ dataset_root/
 When setting up your configuration, make sure to specify:
 
 - `file_patterns`: Patterns to identify XYZ files (default: `['*_reactant.xyz', '*_ts.xyz', '*_product.xyz']`)
-- `target_fields`: Target properties to predict (default: `['G(TS)', 'DrG']`)
-- `input_features`: Features used as input (default: `['G(TS)_xtb', 'DrG_xtb']`)
+- `target_fields`: **[CHANGED]** Target properties to predict (default: `['DG_act', 'DrG']`)
+- `input_features`: **[CHANGED]** Features used as input (default: `['DG_act_xtb', 'DrG_xtb']`)
 - `id_field`: Column name for reaction IDs (default: `'ID'`)
 - `dir_field`: Column name for directory names (default: `'R_dir'`)
 - `reaction_field`: Column name for reaction SMILES (default: `'reaction'`)
@@ -122,7 +140,7 @@ This dataset contains:
 - 1,580+ Diels-Alder reactions with complete 3D structures
 - Quantum chemical calculations (DFT and XTB) for transition states and energetics
 - Reaction energies, activation energies, and structural information
-- Computed properties including G(TS) and DrG values
+- **[CHANGED]** Computed properties including DG_act and DrG values
 
 ### Download and Use
 
