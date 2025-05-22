@@ -27,8 +27,6 @@ This repository corresponds to the DeepReaction project, designed for accurate p
 
 ## 🔧 Installation
 
-**[UPDATED]** We recommend two installation methods:
-
 ### Method 1: Using pip (Recommended)
 
 ```bash
