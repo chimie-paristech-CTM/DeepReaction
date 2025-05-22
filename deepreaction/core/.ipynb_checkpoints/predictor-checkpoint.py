@@ -3,7 +3,6 @@ import torch
 import numpy as np
 import pandas as pd
 from typing import List, Dict, Any, Optional, Union
-import pytorch_lightning as pl
 
 
 class ReactionPredictor:
@@ -25,6 +24,7 @@ class ReactionPredictor:
         self.model = None
         self.device = torch.device('cuda' if gpu and torch.cuda.is_available() else 'cpu')
         self.target_field_names = None
+        self.scalers = None
 
         # Create output directory
         os.makedirs(output_dir, exist_ok=True)
@@ -43,8 +43,15 @@ class ReactionPredictor:
         if not os.path.exists(self.checkpoint_path):
             raise FileNotFoundError(f"Checkpoint file does not exist: {self.checkpoint_path}")
             
+        print(f"Loading model from checkpoint: {self.checkpoint_path}")
+        
         # Load checkpoint
         checkpoint = torch.load(self.checkpoint_path, map_location=self.device)
+        
+        # Debug: Print checkpoint keys
+        print("Checkpoint keys:", list(checkpoint.keys()))
+        if 'hyper_parameters' in checkpoint:
+            print("Hyperparameters:", checkpoint['hyper_parameters'].keys())
         
         # Create model from checkpoint's hyperparameters
         self.model = Estimator(**checkpoint['hyper_parameters'])
@@ -53,10 +60,27 @@ class ReactionPredictor:
         # Set to evaluation mode
         self.model.eval()
         
+        # Extract scalers from the model
+        if hasattr(self.model, 'scaler') and self.model.scaler is not None:
+            self.scalers = self.model.scaler
+            print(f"Found {len(self.scalers) if isinstance(self.scalers, list) else 1} scaler(s) in model")
+            
+            # Debug scaler information
+            if isinstance(self.scalers, list):
+                for i, scaler in enumerate(self.scalers):
+                    if hasattr(scaler, 'mean_') and hasattr(scaler, 'scale_'):
+                        print(f"Scaler {i}: mean={scaler.mean_}, scale={scaler.scale_}")
+            else:
+                if hasattr(self.scalers, 'mean_') and hasattr(self.scalers, 'scale_'):
+                    print(f"Single scaler: mean={self.scalers.mean_}, scale={self.scalers.scale_}")
+        else:
+            print("No scaler found in model")
+            self.scalers = None
+        
         # Disable scaling if requested
-        if not self.use_scaler and hasattr(self.model, 'scaler') and self.model.scaler is not None:
-            print("Disabling scaler for predictions")
-            self.model.scaler = None
+        if not self.use_scaler:
+            print("Disabling scaler for predictions (use_scaler=False)")
+            self.scalers = None
 
         # Move model to appropriate device
         self.model = self.model.to(self.device)
@@ -66,9 +90,14 @@ class ReactionPredictor:
             self.target_field_names = self.model.target_field_names
             print(f"Using target field names from model: {self.target_field_names}")
         else:
-            num_targets = self.model.num_targets if hasattr(self.model, 'num_targets') else 1
-            self.target_field_names = [f"target_{i}" for i in range(num_targets)]
-            print(f"Using default target field names: {self.target_field_names}")
+            # Try to get from hyperparameters
+            if 'target_field_names' in checkpoint.get('hyper_parameters', {}):
+                self.target_field_names = checkpoint['hyper_parameters']['target_field_names']
+                print(f"Using target field names from hyperparameters: {self.target_field_names}")
+            else:
+                num_targets = self.model.num_targets if hasattr(self.model, 'num_targets') else 2
+                self.target_field_names = [f"target_{i}" for i in range(num_targets)]
+                print(f"Using default target field names: {self.target_field_names}")
 
     def predict(self, data_loader=None, dataset=None, csv_output_path=None):
         if self.model is None:
@@ -89,9 +118,13 @@ class ReactionPredictor:
         all_reaction_ids = []
         all_reaction_data = []
 
+        print(f"Starting prediction on {len(data_loader)} batches...")
+        
         with torch.no_grad():
             for batch_idx, batch in enumerate(data_loader):
-                print(f"Processing batch {batch_idx+1}/{len(data_loader)}")
+                if batch_idx % 10 == 0:
+                    print(f"Processing batch {batch_idx+1}/{len(data_loader)}")
+                
                 batch = batch.to(self.device)
                 pos0, pos1, pos2 = batch.pos0, batch.pos1, batch.pos2
                 z0, z1, z2, batch_mapping = batch.z0, batch.z1, batch.z2, batch.batch
@@ -101,38 +134,62 @@ class ReactionPredictor:
                 _, embeddings, predictions = self.model.model(pos0, pos1, pos2, z0, z1, z2, batch_mapping, xtb_features)
                 all_predictions.append(predictions.cpu().numpy())
 
-                for i in range(len(predictions)):
-                    reaction_id = batch.reaction_id[i] if hasattr(batch, 'reaction_id') else f"sample_{i}"
+                # Extract reaction information
+                batch_size = predictions.shape[0]
+                for i in range(batch_size):
+                    reaction_id = getattr(batch, 'reaction_id', [f"sample_{batch_idx}_{i}"])[i] if hasattr(batch, 'reaction_id') else f"sample_{batch_idx}_{i}"
                     all_reaction_ids.append(reaction_id)
 
                     reaction_data = {}
                     for attr in ['id', 'reaction']:
                         if hasattr(batch, attr):
                             value = getattr(batch, attr)
-                            if isinstance(value, list):
-                                reaction_data[attr] = value[i] if i < len(value) else None
-                            else:
+                            if isinstance(value, list) and i < len(value):
+                                reaction_data[attr] = value[i]
+                            elif not isinstance(value, list):
                                 reaction_data[attr] = value
+                            else:
+                                reaction_data[attr] = None
                     all_reaction_data.append(reaction_data)
 
         predictions = np.vstack(all_predictions) if all_predictions else np.array([])
         print(f"Made predictions for {len(all_reaction_ids)} samples with shape {predictions.shape}")
 
-        # Get target field names from model if available
-        target_fields = self.target_field_names or [f"target_{i}" for i in range(predictions.shape[1])]
+        # Debug: Print raw prediction statistics
+        print(f"Raw predictions - Min: {predictions.min():.4f}, Max: {predictions.max():.4f}, Mean: {predictions.mean():.4f}")
 
         # Apply inverse scaling if available
         results = {}
+        target_fields = self.target_field_names or [f"target_{i}" for i in range(predictions.shape[1])]
+        
         for i, target_name in enumerate(target_fields):
             if i >= predictions.shape[1]:
                 continue
                 
             target_preds = predictions[:, i].reshape(-1, 1)
-            if hasattr(self.model, 'scaler') and self.model.scaler is not None:
-                if isinstance(self.model.scaler, list) and i < len(self.model.scaler):
-                    target_preds = self.model.scaler[i].inverse_transform(target_preds)
-                elif not isinstance(self.model.scaler, list):
-                    target_preds = self.model.scaler.inverse_transform(target_preds)
+            
+            # Apply inverse scaling
+            if self.scalers is not None and self.use_scaler:
+                if isinstance(self.scalers, list) and i < len(self.scalers):
+                    scaler = self.scalers[i]
+                    print(f"Applying inverse scaling for {target_name} using scaler {i}")
+                    print(f"  Scaler mean: {scaler.mean_}, scale: {scaler.scale_}")
+                    print(f"  Before scaling - Min: {target_preds.min():.4f}, Max: {target_preds.max():.4f}")
+                    target_preds = scaler.inverse_transform(target_preds)
+                    print(f"  After scaling - Min: {target_preds.min():.4f}, Max: {target_preds.max():.4f}")
+                elif not isinstance(self.scalers, list):
+                    print(f"Applying inverse scaling for {target_name} using single scaler")
+                    print(f"  Before scaling - Min: {target_preds.min():.4f}, Max: {target_preds.max():.4f}")
+                    target_preds = self.scalers.inverse_transform(target_preds)
+                    print(f"  After scaling - Min: {target_preds.min():.4f}, Max: {target_preds.max():.4f}")
+                else:
+                    print(f"No scaler available for target {i} ({target_name})")
+            else:
+                if not self.use_scaler:
+                    print(f"Scaler disabled for {target_name}")
+                else:
+                    print(f"No scaler found for {target_name}")
+            
             results[target_name] = target_preds.flatten()
 
         # Create output DataFrame

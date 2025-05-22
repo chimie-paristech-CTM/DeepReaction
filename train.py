@@ -1,192 +1,160 @@
 #!/usr/bin/env python
-import argparse
+# -*- coding: utf-8 -*-
+
+"""
+DeepReaction Training Script
+
+This script demonstrates how to train a molecular reaction prediction model 
+using the DeepReaction framework with a simplified unified configuration interface.
+Converted from Jupyter notebook to standalone Python script.
+"""
+
 import os
 import sys
 import torch
+import numpy as np
 from pathlib import Path
-from deepreaction import ReactionTrainer, ReactionDataset, load_config
+
+from deepreaction import ReactionTrainer, ReactionDataset, Config
+
 
 def main():
-    parser = argparse.ArgumentParser(description='Train a molecular reaction prediction model')
-    parser.add_argument('-c', '--config', type=str, help='Path to configuration file')
-    parser.add_argument('--dataset', type=str, default='XTB', help='Dataset name')
-    parser.add_argument('--readout', type=str, default='mean', help='Readout function')
-    parser.add_argument('--dataset_root', type=str, default='./dataset/DATASET_DA_F', help='Dataset root directory')
-    parser.add_argument('--dataset_csv', type=str, default='./dataset/DATASET_DA_F/dataset_xtb_final.csv',
-                        help='Dataset CSV file (relative to dataset_root)')
-    parser.add_argument('--train_ratio', type=float, default=0.8, help='Training set ratio')
-    parser.add_argument('--val_ratio', type=float, default=0.1, help='Validation set ratio')
-    parser.add_argument('--test_ratio', type=float, default=0.1, help='Test set ratio')
-    parser.add_argument('--target_fields', type=str, nargs='+', default=['G(TS)', 'DrG'], help='Target fields')
-    parser.add_argument('--target_weights', type=float, nargs='+', default=[1.0, 1.0], help='Target weights')
-    parser.add_argument('--input_features', type=str, nargs='+', default=['G(TS)_xtb', 'DrG_xtb'],
-                        help='Input features')
-    parser.add_argument('--file_patterns', type=str, nargs='+', default=['*_reactant.xyz', '*_ts.xyz', '*_product.xyz'],
-                        help='File patterns')
-    parser.add_argument('--id_field', type=str, default='ID', help='ID field name')
-    parser.add_argument('--dir_field', type=str, default='R_dir', help='Directory field name')
-    parser.add_argument('--reaction_field', type=str, default='reaction', help='Reaction field name')
-    parser.add_argument('--cv_folds', type=int, default=0, help='Number of cross-validation folds')
-    parser.add_argument('--model_type', type=str, default='dimenet++', help='Model type')
-    parser.add_argument('--batch_size', type=int, default=16, help='Batch size')
-    parser.add_argument('--lr', type=float, default=0.0005, help='Learning rate')
-    parser.add_argument('--epochs', type=int, default=3, help='Number of epochs')
-    parser.add_argument('--out_dir', type=str, default='./results/reaction_model', help='Output directory')
-    parser.add_argument('--checkpoint_path', type=str, default=None, help='Checkpoint path for resuming training')
-    parser.add_argument('--mode', type=str, default='continue', choices=['continue', 'finetune'],
-                        help='Mode for checkpoint loading: continue training or finetune')
-    parser.add_argument('--cuda', action='store_true', default=True, help='Use CUDA')
-    parser.add_argument('--no-cuda', action='store_false', dest='cuda', help='Do not use CUDA')
-    parser.add_argument('--gpu_id', type=int, default=0, help='GPU ID')
+    """Main function to run the training process"""
     
-    args = parser.parse_args()
-    
-    # Set up GPU
-    if args.cuda and torch.cuda.is_available():
-        os.environ["CUDA_VISIBLE_DEVICES"] = str(args.gpu_id)
-        device = torch.device(f"cuda:{args.gpu_id}")
+    # Define Training Parameters
+    # All parameters are defined in a single dictionary for simplicity
+    params = {
+        # Dataset parameters
+        'dataset': 'XTB',
+        'readout': 'mean',
+        'dataset_root': './dataset/DATASET_DA_F',  # Adjust path if needed
+        'dataset_csv': './dataset/DATASET_DA_F/dataset_xtb_final.csv', # Adjust path if needed
+        'train_ratio': 0.8,
+        'val_ratio': 0.1,
+        'test_ratio': 0.1,
+        'target_fields': ['G(TS)', 'DrG'],
+        'target_weights': [1.0, 1.0],
+        'input_features': ['G(TS)_xtb', 'DrG_xtb'],
+        'file_patterns': ['*_reactant.xyz', '*_ts.xyz', '*_product.xyz'],
+        'file_dir_pattern': 'reaction_*',
+        'id_field': 'ID',
+        'dir_field': 'R_dir',
+        'reaction_field': 'reaction',
+        'cv_folds': 0, # Set > 0 for cross-validation
+        'use_scaler': True,  # Controls whether to scale target values and pass scalers to trainer
+        
+        # Model parameters (DimeNet++ specific)
+        'model_type': 'dimenet++',
+        'node_dim': 128,
+        'dropout': 0.1,
+        'prediction_hidden_layers': 3,
+        'prediction_hidden_dim': 512,
+        'use_layer_norm': False,
+        
+        'hidden_channels': 128,
+        'num_blocks': 5,
+        'int_emb_size': 64,
+        'basis_emb_size': 8,
+        'out_emb_channels': 256,
+        'num_spherical': 7,
+        'num_radial': 6,
+        'cutoff': 5.0,
+        'envelope_exponent': 5,
+        'num_before_skip': 1,
+        'num_after_skip': 2,
+        'num_output_layers': 3,
+        'max_num_neighbors': 32,
+        
+        # Training parameters
+        'batch_size': 16,
+        'eval_batch_size': None, # Uses batch_size if None
+        'lr': 0.0005,
+        'finetune_lr': None,
+        'epochs': 10,
+        'min_epochs': 0,
+        'early_stopping': 40,
+        'optimizer': 'adamw',
+        'scheduler': 'warmup_cosine',
+        'warmup_epochs': 10,
+        'min_lr': 1e-7,
+        'weight_decay': 0.0001,
+        'random_seed': 42234,
+        
+        'out_dir': './results/reaction_model',  # Output directory for saving results
+        'save_best_model': True,
+        'save_last_model': False,
+        'checkpoint_path': None, # Path to a .ckpt file to resume/continue
+        'mode': 'continue', # 'train' or 'continue'
+        'freeze_base_model': False,
+        
+        'cuda': True, # Set to False to force CPU
+        'gpu_id': 0,
+        'num_workers': 4 # Number of workers for data loading
+    }
+
+    # Setup GPU or CPU
+    if params['cuda'] and torch.cuda.is_available():
+        os.environ["CUDA_VISIBLE_DEVICES"] = str(params['gpu_id'])
+        device = torch.device(f"cuda:{params['gpu_id']}")
         print(f"Using GPU: {torch.cuda.get_device_name(device)}")
     else:
         os.environ["CUDA_VISIBLE_DEVICES"] = ""
         device = torch.device("cpu")
         print("Using CPU")
-        args.cuda = False
-    
+        params['cuda'] = False
+
     # Create output directory
-    os.makedirs(args.out_dir, exist_ok=True)
+    os.makedirs(params['out_dir'], exist_ok=True)
+    print(f"Output directory created/exists: {params['out_dir']}")
+
+    # Create configuration directly from parameters dictionary
+    config = Config.from_params(params)
+    print("Configuration created successfully")
+
+    # Load dataset using the unified configuration
+    print("Loading dataset from unified configuration")
     
-    # Load configuration if provided
-    if args.config:
-        config = load_config(args.config)
-    else:
-        # Use CLI arguments
-        from deepreaction.config.config import Config, ReactionConfig, ModelConfig, TrainingConfig, save_config
-        
-        reaction_config = ReactionConfig(
-            dataset_root=args.dataset_root,
-            dataset_csv=args.dataset_csv,
-            target_fields=args.target_fields,
-            file_patterns=args.file_patterns,
-            input_features=args.input_features,
-            train_ratio=args.train_ratio,
-            val_ratio=args.val_ratio,
-            test_ratio=args.test_ratio,
-            cv_folds=args.cv_folds,
-            id_field=args.id_field,
-            dir_field=args.dir_field,
-            reaction_field=args.reaction_field
-        )
-
-        model_config = ModelConfig(
-            model_type=args.model_type,
-            readout=args.readout
-        )
-
-        training_config = TrainingConfig(
-            output_dir=args.out_dir,
-            batch_size=args.batch_size,
-            learning_rate=args.lr,
-            max_epochs=args.epochs,
-            gpu=args.cuda,
-            resume_from_checkpoint=args.checkpoint_path
-        )
-
-        config = Config(
-            reaction=reaction_config,
-            model=model_config,
-            training=training_config
-        )
-        
-        # Save configuration
-        config_path = os.path.join(args.out_dir, 'config')
-        save_config(config, config_path)
-        print(f"Configuration saved to {config_path}.yaml and {config_path}.json")
-    
-    # Load dataset
-    print(f"Loading dataset from {config.reaction.dataset_root}")
-    dataset = ReactionDataset(
-        root=config.reaction.dataset_root,
-        csv_file=config.reaction.dataset_csv,
-        target_fields=config.reaction.target_fields,
-        file_patterns=config.reaction.file_patterns,
-        input_features=config.reaction.input_features,
-        use_scaler=True,
-        random_seed=config.reaction.random_seed,
-        train_ratio=config.reaction.train_ratio,
-        val_ratio=config.reaction.val_ratio,
-        test_ratio=config.reaction.test_ratio,
-        cv_folds=config.reaction.cv_folds,
-        id_field=config.reaction.id_field,
-        dir_field=config.reaction.dir_field,
-        reaction_field=config.reaction.reaction_field
-    )
+    # Pass the entire config object to the dataset
+    dataset = ReactionDataset(config=config)
     
     print("Dataset loaded successfully")
     data_stats = dataset.get_data_stats()
-    print(f"Dataset stats: Train: {data_stats['train_size']}, Validation: {data_stats['val_size']}, Test: {data_stats['test_size']}")
+    print(f"Dataset stats: Train: {data_stats['train_size']}, "
+          f"Validation: {data_stats['val_size']}, "
+          f"Test: {data_stats['test_size']}")
     
-    # Create trainer
+    if config.reaction.cv_folds > 0:
+        print(f"Cross-validation enabled with {dataset.get_num_folds()} folds.")
+
+    # Create trainer - use scaler based on the config parameter
+    scalers = dataset.get_scalers() if config.reaction.use_scaler else None
+    
+    print(f"Using scaler: {config.reaction.use_scaler}")
+    
     trainer = ReactionTrainer(
-        model_type=config.model.model_type,
-        readout=config.model.readout,
-        batch_size=config.training.batch_size,
-        max_epochs=config.training.max_epochs,
-        learning_rate=config.training.learning_rate,
-        output_dir=config.training.output_dir,
-        early_stopping_patience=config.training.early_stopping_patience,
-        save_best_model=config.training.save_best_model,
-        save_last_model=config.training.save_last_model,
-        random_seed=config.reaction.random_seed,
-        num_targets=len(config.reaction.target_fields),
-        use_scaler=True,
-        scalers=dataset.get_scalers(),
-        optimizer=config.training.optimizer,
-        weight_decay=config.training.weight_decay,
-        scheduler=config.training.scheduler,
-        warmup_epochs=config.training.warmup_epochs,
-        min_lr=config.training.min_lr,
-        gpu=config.training.gpu,
-        node_dim=config.model.node_dim,
-        dropout=config.model.dropout,
-        use_layer_norm=config.model.use_layer_norm,
-        target_field_names=config.reaction.target_fields,
-        use_xtb_features=config.model.use_xtb_features,
-        num_xtb_features=config.model.num_xtb_features,
-        prediction_hidden_layers=config.model.prediction_hidden_layers,
-        prediction_hidden_dim=config.model.prediction_hidden_dim,
-        min_epochs=config.training.min_epochs,
-        num_workers=config.training.num_workers,
-        hidden_channels=config.model.hidden_channels,
-        num_blocks=config.model.num_blocks,
-        cutoff=config.model.cutoff,
-        int_emb_size=config.model.int_emb_size,
-        basis_emb_size=config.model.basis_emb_size,
-        out_emb_channels=config.model.out_emb_channels,
-        num_spherical=config.model.num_spherical,
-        num_radial=config.model.num_radial,
-        envelope_exponent=config.model.envelope_exponent,
-        num_before_skip=config.model.num_before_skip,
-        num_after_skip=config.model.num_after_skip,
-        num_output_layers=config.model.num_output_layers,
-        max_num_neighbors=config.model.max_num_neighbors,
+        config=config,
+        scalers=scalers  # Pass scalers only if use_scaler is True
     )
     
-    # Train model
-    print(f"Starting {args.mode} training with {config.training.max_epochs} epochs")
+    print("Trainer initialized successfully")
+    print(f"Starting training with {config.training.max_epochs} epochs")
+
+    # Train the model
     train_metrics = trainer.fit(
         train_dataset=dataset.train_data,
         val_dataset=dataset.val_data,
         test_dataset=dataset.test_data,
         checkpoint_path=config.training.resume_from_checkpoint,
-        mode=args.mode
+        mode=config.training.mode
     )
     
-    print(f"Training completed.")
-    print(f"Metrics: {train_metrics}")
+    print("Training completed successfully")
+    print("Metrics:", train_metrics)
     if 'best_model_path' in train_metrics and train_metrics['best_model_path']:
         print(f"Best model saved to: {train_metrics['best_model_path']}")
-    
-    return 0
+    elif config.training.save_last_model and 'last_model_path' in train_metrics and train_metrics['last_model_path']:
+        print(f"Last model saved to: {train_metrics['last_model_path']}")
+
 
 if __name__ == "__main__":
-    sys.exit(main())
+    main()

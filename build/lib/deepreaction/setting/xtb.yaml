@@ -1,0 +1,68 @@
+# Configuration for XTB reaction dataset training
+# Run with: ./train.sh --config configs/xtb_example.yaml
+
+# Dataset parameters
+dataset: XTB
+target_id: 0
+standard_scale_targets: true
+
+# Dataset paths
+reaction_dataset_root: /root/attention-based-pooling-for-quantum-properties-main/data_loading/DATASET_DA
+reaction_dataset_csv: /root/attention-based-pooling-for-quantum-properties-main/data_loading/DATASET_DA/DA_dataset_cleaned.csv
+
+# Model parameters
+model_type: dimenet++
+readout: set_transformer
+node_latent_dim: 128
+edge_latent_dim: 64
+use_layer_norm: true
+dropout: 0.1
+
+# DimeNet++ parameters
+dimenet_hidden_channels: 128
+dimenet_num_blocks: 4
+dimenet_int_emb_size: 64
+dimenet_basis_emb_size: 8
+dimenet_out_emb_channels: 256
+dimenet_num_spherical: 7
+dimenet_num_radial: 6
+dimenet_cutoff: 5.0
+
+# Set Transformer parameters
+set_transformer_hidden_dim: 256
+set_transformer_num_heads: 8
+set_transformer_num_sabs: 2
+
+# Training parameters
+batch_size: 16
+max_epochs: 150
+min_epochs: 20
+early_stopping_patience: 30
+log_every_n_steps: 50
+progress_bar: true
+
+# Optimization parameters
+optimizer: adamw
+lr: 0.0005
+weight_decay: 0.0001
+scheduler: warmup_cosine
+warmup_epochs: 10
+min_lr: 0.0000001
+
+# Output parameters
+out_dir: ./results/xtb
+save_best_model: true
+save_last_model: true
+save_predictions: true
+save_visualizations: true
+log_to_file: true
+logger_type: tensorboard
+
+# Hardware parameters
+cuda: true
+precision: 32
+devices: 1
+num_workers: 4
+
+# Experiment parameters
+random_seed: 42
