@@ -56,21 +56,21 @@ def symbols_to_atomic_numbers(symbols):
 
 def find_xyz_files(folder_path, prefix, keywords=['reactant', 'ts', 'product']):
     found_files = {}
-    
+
     xyz_files = glob.glob(osp.join(folder_path, f"{prefix}*.xyz"))
-    
+
     for keyword in keywords:
         for xyz_file in xyz_files:
             basename = osp.basename(xyz_file).lower()
             if keyword in basename:
                 found_files[keyword] = xyz_file
                 break
-    
+
     missing = [k for k in keywords if k not in found_files]
     if missing:
         suffixes = {
             'reactant': '_reactant.xyz',
-            'ts': '_ts.xyz', 
+            'ts': '_ts.xyz',
             'product': '_product.xyz'
         }
         for keyword in missing:
@@ -78,7 +78,7 @@ def find_xyz_files(folder_path, prefix, keywords=['reactant', 'ts', 'product']):
                 file_path = osp.join(folder_path, f"{prefix}{suffixes[keyword]}")
                 if osp.exists(file_path):
                     found_files[keyword] = file_path
-    
+
     return found_files
 
 
@@ -86,7 +86,7 @@ class ReactionXYZDataset(InMemoryDataset):
     SCHEMA_VERSION = "v3"
 
     def __init__(self, root, csv_file='DA_dataset.csv', transform=None, pre_transform=None, pre_filter=None,
-                 target_fields=None, file_keywords=None, input_features=None, force_reload=False, 
+                 target_fields=None, file_keywords=None, input_features=None, force_reload=False,
                  inference_mode=False, id_field='ID', dir_field='R_dir', reaction_field='smiles'):
         if osp.isabs(csv_file) or csv_file.startswith('./') or csv_file.startswith('../'):
             self.csv_file = csv_file
@@ -147,12 +147,13 @@ class ReactionXYZDataset(InMemoryDataset):
             if metadata.get('file_keywords') != self.file_keywords:
                 print(f"File keywords changed from {metadata.get('file_keywords')} to {self.file_keywords}")
                 return True
-                
+
             if metadata.get('inference_mode', False) != self.inference_mode:
                 print(f"Inference mode changed from {metadata.get('inference_mode', False)} to {self.inference_mode}")
                 return True
-                
-            if metadata.get('id_field') != self.id_field or metadata.get('dir_field') != self.dir_field or metadata.get('reaction_field') != self.reaction_field:
+
+            if metadata.get('id_field') != self.id_field or metadata.get('dir_field') != self.dir_field or metadata.get(
+                    'reaction_field') != self.reaction_field:
                 print(f"Field names changed")
                 return True
 
@@ -196,7 +197,7 @@ class ReactionXYZDataset(InMemoryDataset):
                         os.remove(file_path)
                     except Exception as remove_error:
                         print(f"Warning: Failed to remove corrupted file: {remove_error}")
-        
+
         metadata_path = osp.join(self.processed_dir, 'metadata.json')
         if osp.exists(metadata_path):
             try:
@@ -284,7 +285,7 @@ class ReactionXYZDataset(InMemoryDataset):
 
         if not target_field_names and not self.inference_mode:
             raise ValueError(f"Could not find target field in CSV. Available fields: {list(sample_row.keys())}")
-        
+
         if self.inference_mode and not target_field_names:
             target_field_names = ['target']
             print("Inference mode: Using dummy target field")
@@ -355,7 +356,7 @@ class ReactionXYZDataset(InMemoryDataset):
                 prefix = prefix[len("reaction_"):]
 
             found_files = find_xyz_files(folder_path, prefix, self.file_keywords)
-            
+
             if len(found_files) != len(self.file_keywords):
                 missing = [k for k in self.file_keywords if k not in found_files]
                 print(f"Warning: Missing xyz files {missing} in {folder_path}, skipping reaction_id {reaction_id}")
@@ -369,7 +370,7 @@ class ReactionXYZDataset(InMemoryDataset):
                     skip_record = True
                     break
                 xyz_data.append((symbols, pos))
-            
+
             if skip_record or len(xyz_data) != len(self.file_keywords):
                 continue
 
@@ -381,7 +382,7 @@ class ReactionXYZDataset(InMemoryDataset):
                     skip_record = True
                     break
                 z_data.append(z)
-            
+
             if skip_record:
                 continue
 
@@ -493,35 +494,35 @@ class ReactionXYZDataset(InMemoryDataset):
         try:
             if self.slices is None or 'z0' not in self.slices:
                 raise ValueError("Dataset not properly loaded")
-                
+
             max_idx = len(self.slices['z0']) - 1
             if idx < 0 or idx >= max_idx:
                 raise IndexError(f"Index {idx} out of range (max: {max_idx - 1})")
-            
+
             data = super().__getitem__(idx)
-            
+
             if data is None:
                 raise ValueError(f"Data at index {idx} is None")
-            
+
             if hasattr(data, 'y') and data.y is not None:
                 if len(data.y.shape) == 1:
                     data.y = data.y.unsqueeze(0)
             else:
                 data.y = torch.zeros((1, 1), dtype=torch.float)
-            
+
             required_attrs = ['z0', 'z1', 'z2', 'pos0', 'pos1', 'pos2', 'y']
             for attr in required_attrs:
                 if not hasattr(data, attr) or getattr(data, attr) is None:
                     raise ValueError(f"Data at index {idx} missing attribute: {attr}")
-            
+
             return data
-            
+
         except Exception as e:
             print(f"Error accessing item at index {idx}: {e}")
-            
+
             if idx == 0:
                 print("First item access failed, data may be corrupted. Forcing reprocessing...")
                 self._cleanup_corrupted_files()
                 raise RuntimeError(f"Data corruption detected at index {idx}. Please restart to reprocess data.")
-            
+
             raise

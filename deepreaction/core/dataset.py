@@ -19,7 +19,7 @@ class ReactionDataset:
         self.fold_datasets = None
         self._setup_logging()
         self._load_data()
-    
+
     def _setup_logging(self):
         self.logger = logging.getLogger('deepreaction')
         if not self.logger.handlers:
@@ -28,14 +28,14 @@ class ReactionDataset:
             handler.setFormatter(formatter)
             self.logger.addHandler(handler)
             self.logger.setLevel(getattr(logging, self.config.system.log_level.upper()))
-    
+
     def _load_data(self):
         torch.manual_seed(self.config.training.random_seed)
         np.random.seed(self.config.training.random_seed)
         random.seed(self.config.training.random_seed)
-        
+
         self.logger.info("Loading reaction dataset...")
-        
+
         try:
             result = load_reaction(
                 random_seed=self.config.training.random_seed,
@@ -58,34 +58,35 @@ class ReactionDataset:
                 dir_field=self.config.dataset.dir_field,
                 reaction_field=self.config.dataset.reaction_field
             )
-            
+
             if self.config.dataset.cv_folds > 0:
                 self.fold_datasets = result
                 self.logger.info(f"Loaded {len(self.fold_datasets)} CV folds")
             else:
                 self.train_data, self.val_data, self.test_data, self.scalers = result
-                self.logger.info(f"Loaded train: {len(self.train_data)}, val: {len(self.val_data)}, test: {len(self.test_data)}")
-                
+                self.logger.info(
+                    f"Loaded train: {len(self.train_data)}, val: {len(self.val_data)}, test: {len(self.test_data)}")
+
         except Exception as e:
             self.logger.error(f"Error loading dataset: {e}")
             raise
-    
+
     def get_num_folds(self) -> int:
         return self.config.dataset.cv_folds if self.fold_datasets else 0
-    
+
     def get_fold_data(self, fold_idx: int) -> Dict[str, Any]:
         if not self.fold_datasets or fold_idx >= len(self.fold_datasets):
             raise ValueError(f"Invalid fold index: {fold_idx}")
         return self.fold_datasets[fold_idx]
-    
+
     def get_data_splits(self) -> Tuple[List, List, List, Optional[List]]:
         if self.fold_datasets:
             fold_data = self.fold_datasets[0]
             return fold_data['train'], fold_data['val'], fold_data['test'], fold_data['scalers']
         return self.train_data, self.val_data, self.test_data, self.scalers
-    
+
     def get_num_targets(self) -> int:
         return len(self.config.dataset.target_fields)
-    
+
     def get_num_features(self) -> int:
         return len(self.config.dataset.input_features)

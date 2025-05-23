@@ -26,7 +26,7 @@ class DatasetConfig:
     cv_stratify: bool = False
     cv_grouped: bool = True
     num_workers: int = 4
-    
+
     def __post_init__(self):
         if self.target_fields is None:
             self.target_fields = ['DG_act', 'DrG']
@@ -97,7 +97,7 @@ class TrainingConfig:
     mode: str = 'train'
     freeze_base_model: bool = False
     precision: str = '32'
-    
+
     def __post_init__(self):
         if self.eval_batch_size is None:
             self.eval_batch_size = self.batch_size
@@ -123,46 +123,47 @@ class Config:
         self.training = training
         self.system = system
         self._validate_config()
-    
+
     def _validate_config(self):
         if not os.path.exists(self.dataset.dataset_csv):
             print(f"Warning: Dataset CSV not found: {self.dataset.dataset_csv}")
-        
+
         if not os.path.exists(self.dataset.dataset_root):
             print(f"Warning: Dataset root not found: {self.dataset.dataset_root}")
-        
+
         if abs(self.dataset.train_ratio + self.dataset.val_ratio + self.dataset.test_ratio - 1.0) > 1e-6:
             if self.dataset.cv_folds == 0 and not (self.dataset.val_csv and self.dataset.test_csv):
                 raise ValueError("Train, validation, and test ratios must sum to 1.0")
-        
+
         if len(self.dataset.input_features) != len(self.dataset.target_fields):
-            print(f"Warning: input_features ({len(self.dataset.input_features)}) and target_fields ({len(self.dataset.target_fields)}) counts don't match")
-        
+            print(
+                f"Warning: input_features ({len(self.dataset.input_features)}) and target_fields ({len(self.dataset.target_fields)}) counts don't match")
+
         if len(self.dataset.target_weights) != len(self.dataset.target_fields):
             print(f"Warning: target_weights length adjusted to match target_fields")
             self.dataset.target_weights = [1.0] * len(self.dataset.target_fields)
-        
+
         if self.dataset.cv_folds > 0 and self.dataset.cv_test_fold >= self.dataset.cv_folds:
             raise ValueError(f"cv_test_fold ({self.dataset.cv_test_fold}) must be < cv_folds ({self.dataset.cv_folds})")
-        
+
         if self.training.batch_size <= 0:
             raise ValueError("batch_size must be positive")
-        
+
         if self.training.lr <= 0:
             raise ValueError("learning rate must be positive")
-    
+
     @classmethod
     def from_params(cls, params: Dict[str, Any]) -> 'Config':
         dataset_params = {}
         model_params = {}
         training_params = {}
         system_params = {}
-        
+
         dataset_fields = {f.name for f in DatasetConfig.__dataclass_fields__.values()}
         model_fields = {f.name for f in ModelConfig.__dataclass_fields__.values()}
         training_fields = {f.name for f in TrainingConfig.__dataclass_fields__.values()}
         system_fields = {f.name for f in SystemConfig.__dataclass_fields__.values()}
-        
+
         for key, value in params.items():
             if key in dataset_fields:
                 dataset_params[key] = value
@@ -174,7 +175,7 @@ class Config:
                 system_params[key] = value
             else:
                 print(f"Warning: Unknown parameter '{key}' with value '{value}' ignored")
-        
+
         try:
             dataset_config = DatasetConfig(**dataset_params)
             model_config = ModelConfig(**model_params)
@@ -183,9 +184,9 @@ class Config:
         except Exception as e:
             print(f"Error creating configuration: {e}")
             raise
-        
+
         return cls(dataset_config, model_config, training_config, system_config)
-    
+
     def to_dict(self) -> Dict[str, Any]:
         return {
             'dataset': asdict(self.dataset),
@@ -193,7 +194,7 @@ class Config:
             'training': asdict(self.training),
             'system': asdict(self.system)
         }
-    
+
     def save(self, path: str):
         import json
         try:
@@ -202,43 +203,43 @@ class Config:
         except Exception as e:
             print(f"Error saving configuration to {path}: {e}")
             raise
-    
+
     @classmethod
     def load(cls, path: str) -> 'Config':
         import json
         try:
             with open(path, 'r') as f:
                 data = json.load(f)
-            
+
             dataset_config = DatasetConfig(**data['dataset'])
             model_config = ModelConfig(**data['model'])
             training_config = TrainingConfig(**data['training'])
             system_config = SystemConfig(**data['system'])
-            
+
             return cls(dataset_config, model_config, training_config, system_config)
         except Exception as e:
             print(f"Error loading configuration from {path}: {e}")
             raise
-    
+
     def print_config(self):
         print("=" * 50)
         print("CONFIGURATION")
         print("=" * 50)
-        
+
         print("\n[DATASET CONFIG]")
         for key, value in asdict(self.dataset).items():
             print(f"  {key}: {value}")
-        
+
         print("\n[MODEL CONFIG]")
         for key, value in asdict(self.model).items():
             print(f"  {key}: {value}")
-        
+
         print("\n[TRAINING CONFIG]")
         for key, value in asdict(self.training).items():
             print(f"  {key}: {value}")
-        
+
         print("\n[SYSTEM CONFIG]")
         for key, value in asdict(self.system).items():
             print(f"  {key}: {value}")
-        
+
         print("=" * 50)

@@ -10,7 +10,7 @@ def select_target_id(ds_geometric, target_id):
         data_obj = Data(
             z=data.z,
             pos=data.pos,
-            y=data.y[target_id].reshape(1,) if data.y.dim() == 1 else data.y[:, target_id].reshape(1,),
+            y=data.y[target_id].reshape(1, ) if data.y.dim() == 1 else data.y[:, target_id].reshape(1, ),
             num_nodes=data.num_nodes
         )
         if hasattr(data, 'y_names'):
@@ -23,15 +23,15 @@ def select_target_id(ds_geometric, target_id):
 def train_scaler(ds_geometric):
     if not ds_geometric:
         return None
-        
+
     ys = []
     for data in ds_geometric:
         if hasattr(data, 'y') and data.y is not None:
             ys.append(data.y.item())
-    
+
     if not ys:
         return None
-        
+
     ys = np.array(ys).reshape(-1, 1)
     scaler = StandardScaler()
     scaler = scaler.fit(ys)
@@ -42,15 +42,15 @@ def train_scaler(ds_geometric):
 def scale_dataset(ds_geometric, scaler):
     if not scaler:
         return ds_geometric
-        
+
     ys = []
     for data in ds_geometric:
         if hasattr(data, 'y') and data.y is not None:
             ys.append(data.y.item())
-    
+
     if not ys:
         return ds_geometric
-        
+
     ys = np.array(ys).reshape(-1, 1)
     ys_scaled = scaler.transform(ys)
 

@@ -147,6 +147,7 @@ REQUIREMENTS = [
     "tensorboard>=2.10.0",
     "seaborn>=0.11.0",
     "ipywidgets>=8.0.0",
+    'optuna',
 ]
 
 EXTRAS_REQUIRE = {

@@ -33,7 +33,7 @@ def main():
     }
 
     # Paths
-    checkpoint_path = "./results/reaction_model/checkpoints/best-epoch=0002-val_total_loss=0.1110.ckpt"
+    checkpoint_path = "./results/reaction_model/checkpoints/best-epoch=0000-val_total_loss=0.4889.ckpt"
     inference_csv = "./dataset/DATASET_DA_F/dataset_xtb_final.csv"
     output_dir = "./predictions"
 

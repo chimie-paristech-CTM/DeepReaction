@@ -22,6 +22,9 @@ def main():
         'input_features': ['DG_act_xtb', 'DrG_xtb'],
         'file_keywords': ['reactant', 'ts', 'product'],  # Simplified from file_suffixes
         'use_scaler': True,
+        'id_field': 'ID',           # Column name for reaction ID
+        'dir_field': 'R_dir',       # Column name for directory containing reaction files
+        'reaction_field': 'smiles', # Column name for SMILES string representation
 
         # Readout parameter
         'readout': 'mean',
@@ -113,6 +116,7 @@ def main():
     print(f"  Target fields: {config.dataset.target_fields}")
     print(f"  Input features: {config.dataset.input_features}")
     print(f"  File keywords: {config.dataset.file_keywords}")
+    print(f"  CSV field mapping: id='{config.dataset.id_field}', dir='{config.dataset.dir_field}', reaction='{config.dataset.reaction_field}'")
     print(f"  Batch size: {config.training.batch_size}")
     print(f"  Learning rate: {config.training.lr}")
     print(f"  Max epochs: {config.training.max_epochs}")

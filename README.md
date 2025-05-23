@@ -166,7 +166,8 @@ To train the model with the dataset using our specialized training script:
 
 ```
 # Basic training with default parameters
-./example/train.ipynb
+cp ./example/train.py .
+python train.py
 ```
 
 ### Available command line options
@@ -185,8 +186,8 @@ To train the model with the dataset using our specialized training script:
 To evaluate a trained model:
 
 ```
-# Run prediction notebook
-jupyter lab example/predict.ipynb
+cp ./example/predict.py .
+python predict.py
 ```
 
 The prediction notebook allows you to:
@@ -201,7 +202,8 @@ The prediction notebook allows you to:
 
 ```bash
 # Run hyperparameter optimization
-./example/hyper.py
+cp ./example/hyper.py .
+python hyper.py
 ```
 
 ## 📝 Citation

@@ -111,9 +111,9 @@ def objective(trial):
         'target_weights': [1.0, 1.0],
         'input_features': ['DG_act_xtb', 'DrG_xtb'],
         'file_keywords': ['reactant', 'ts', 'product'],
-        'id_field': 'ID',
-        'dir_field': 'R_dir',
-        'reaction_field': 'smiles',
+        'id_field': 'ID',           # Column name for reaction ID
+        'dir_field': 'R_dir',       # Column name for directory containing reaction files
+        'reaction_field': 'smiles', # Column name for SMILES string representation
         'use_scaler': True,
         'readout': 'mean',
 
