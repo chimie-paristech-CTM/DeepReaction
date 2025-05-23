@@ -166,7 +166,7 @@ To train the model with the dataset using our specialized training script:
 
 ```
 # Basic training with default parameters
-./example/train_reaction.py
+./example/train.ipynb
 ```
 
 ### Available command line options
@@ -186,7 +186,7 @@ To evaluate a trained model:
 
 ```
 # Run prediction notebook
-jupyter lab example/predict_reaction.ipynb
+jupyter lab example/predict.ipynb
 ```
 
 The prediction notebook allows you to:
@@ -201,7 +201,7 @@ The prediction notebook allows you to:
 
 ```bash
 # Run hyperparameter optimization
-./example/hyperopt_grid.py
+./example/hyper.py
 ```
 
 ## 📝 Citation
