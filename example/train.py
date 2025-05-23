@@ -9,9 +9,9 @@ from deepreaction import Config, ReactionDataset, ReactionTrainer
 
 
 def main():
+    # Simplified parameters - removed redundant ones
     params = {
-        'dataset': 'XTB',
-        'readout': 'mean',
+        # Dataset parameters
         'dataset_root': './dataset/DATASET_DA_F',
         'dataset_csv': './dataset/DATASET_DA_F/dataset_xtb_final.csv',
         'train_ratio': 0.8,
@@ -20,30 +20,21 @@ def main():
         'target_fields': ['DG_act', 'DrG'],
         'target_weights': [1.0, 1.0],
         'input_features': ['DG_act_xtb', 'DrG_xtb'],
-        'file_patterns': ['*_reactant.xyz', '*_ts.xyz', '*_product.xyz'],
-        'file_dir_pattern': 'reaction_*',
-        'id_field': 'ID',
-        'dir_field': 'R_dir',
-        'reaction_field': 'smiles',
-        'cv_folds': 0,
+        'file_keywords': ['reactant', 'ts', 'product'],  # Simplified from file_suffixes
         'use_scaler': True,
-        'val_csv': None,
-        'test_csv': None,
-        'cv_test_fold': -1,
-        'cv_stratify': False,
-        'cv_grouped': True,
-        'file_suffixes': ['_reactant.xyz', '_ts.xyz', '_product.xyz'],
-        
+
+        # Readout parameter
+        'readout': 'mean',
         'model_type': 'dimenet++',
         'node_dim': 128,
         'dropout': 0.1,
         'prediction_hidden_layers': 3,
         'prediction_hidden_dim': 512,
         'use_layer_norm': False,
-        'activation': 'silu',
         'use_xtb_features': True,
         'max_num_atoms': 100,
-        
+
+        # DimeNet++ specific parameters
         'hidden_channels': 128,
         'num_blocks': 5,
         'int_emb_size': 64,
@@ -57,17 +48,17 @@ def main():
         'num_after_skip': 2,
         'num_output_layers': 3,
         'max_num_neighbors': 32,
-        
+
+        # Readout parameters
         'readout_hidden_dim': 128,
         'readout_num_heads': 4,
         'readout_num_sabs': 2,
-        
+
+        # Training parameters
         'batch_size': 16,
         'eval_batch_size': 32,
         'lr': 0.0005,
-        'finetune_lr': None,
         'max_epochs': 4,
-        'min_epochs': 0,
         'early_stopping_patience': 40,
         'early_stopping_min_delta': 0.0001,
         'optimizer': 'adamw',
@@ -80,16 +71,10 @@ def main():
         'gradient_clip_val': 0.0,
         'gradient_accumulation_steps': 1,
         'precision': '32',
-        
         'out_dir': './results/reaction_model',
         'save_best_model': True,
-        'save_last_model': False,
-        'save_predictions': True,
-        'save_interval': 0,
-        'checkpoint_path': None,
-        'mode': 'train',
-        'freeze_base_model': False,
-        
+
+        # System parameters
         'cuda': True,
         'gpu_id': 0,
         'num_workers': 4,
@@ -97,14 +82,22 @@ def main():
         'num_nodes': 1,
         'devices': 1,
         'log_level': 'info',
-        'log_to_file': False,
+        'matmul_precision': 'medium',
     }
 
+    # GPU setup
     if params['cuda'] and torch.cuda.is_available():
         os.environ["CUDA_VISIBLE_DEVICES"] = str(params['gpu_id'])
         device = torch.device(f"cuda:{params['gpu_id']}")
         print(f"Using GPU: {torch.cuda.get_device_name(device)}")
         print(f"GPU Memory: {torch.cuda.get_device_properties(device).total_memory / 1e9:.1f} GB")
+
+        device_name = torch.cuda.get_device_name(device)
+        if any(gpu in device_name for gpu in
+               ['V100', 'A100', 'A10', 'A30', 'A40', 'RTX 30', 'RTX 40', '3080', '3090', '4080', '4090']):
+            torch.set_float32_matmul_precision(params.get('matmul_precision', 'high'))
+            print(
+                f"Set float32 matmul precision to '{params.get('matmul_precision', 'high')}' for better Tensor Core utilization")
     else:
         os.environ["CUDA_VISIBLE_DEVICES"] = ""
         device = torch.device("cpu")
@@ -113,37 +106,31 @@ def main():
 
     print("Creating configuration...")
     config = Config.from_params(params)
-    
-    if params['log_level'] == 'debug':
-        config.print_config()
-    else:
-        print(f"Dataset: {config.dataset.dataset}")
-        print(f"Model: {config.model.model_type}")
-        print(f"Target fields: {config.dataset.target_fields}")
-        print(f"Input features: {config.dataset.input_features}")
-        print(f"Batch size: {config.training.batch_size}")
-        print(f"Learning rate: {config.training.lr}")
-        print(f"Max epochs: {config.training.max_epochs}")
-        print(f"Output directory: {config.training.out_dir}")
 
-    print("Loading dataset...")
+    # Print key configuration
+    print(f"\nKey Configuration:")
+    print(f"  Model: {config.model.model_type}")
+    print(f"  Target fields: {config.dataset.target_fields}")
+    print(f"  Input features: {config.dataset.input_features}")
+    print(f"  File keywords: {config.dataset.file_keywords}")
+    print(f"  Batch size: {config.training.batch_size}")
+    print(f"  Learning rate: {config.training.lr}")
+    print(f"  Max epochs: {config.training.max_epochs}")
+    print(f"  Output directory: {config.training.out_dir}")
+
+    # Load dataset
+    print("\nLoading dataset...")
     dataset = ReactionDataset(config=config)
-    
-    if config.reaction.cv_folds > 0:
-        print(f"Cross-validation enabled with {dataset.get_num_folds()} folds.")
-    else:
-        train_data, val_data, test_data, scalers = dataset.get_data_splits()
-        print(f"Dataset loaded: train={len(train_data)}, val={len(val_data)}, test={len(test_data)}")
+    train_data, val_data, test_data, scalers = dataset.get_data_splits()
+    print(f"Dataset loaded: train={len(train_data)}, val={len(val_data)}, test={len(test_data)}")
 
-    print("Initializing trainer...")
+    # Initialize trainer
+    print("\nInitializing trainer...")
     trainer = ReactionTrainer(config=config)
-    
-    print("Trainer initialized successfully")
-    print(f"Starting training with {config.training.max_epochs} epochs")
 
+    # Start training
+    print(f"\nStarting training with {config.training.max_epochs} epochs...")
     try:
-        train_data, val_data, test_data, scalers = dataset.get_data_splits()
-
         train_metrics = trainer.fit(
             train_dataset=train_data,
             val_dataset=val_data,
@@ -152,31 +139,28 @@ def main():
             checkpoint_path=config.training.checkpoint_path,
             mode=config.training.mode
         )
-        
-        print("\n" + "="*50)
+
+        print("\n" + "=" * 50)
         print("TRAINING COMPLETED SUCCESSFULLY")
-        print("="*50)
-        
+        print("=" * 50)
         print(f"Training time: {train_metrics.get('training_time', 0):.2f} seconds")
         print(f"Epochs completed: {train_metrics.get('epochs_completed', 0)}")
-        
+
         if 'best_model_path' in train_metrics and train_metrics['best_model_path']:
             print(f"Best model saved to: {train_metrics['best_model_path']}")
-        elif config.training.save_last_model and 'last_model_path' in train_metrics:
-            print(f"Last model saved to: {train_metrics['last_model_path']}")
-        
+
         if 'test_results' in train_metrics and train_metrics['test_results']:
             print(f"Test results: {train_metrics['test_results']}")
-        
+
         print(f"All outputs saved in: {config.training.out_dir}")
-        print("="*50)
-        
+        print("=" * 50)
+
     except Exception as e:
         print(f"\nTraining failed with error: {e}")
         import traceback
         traceback.print_exc()
         return False
-    
+
     return True
 
 
