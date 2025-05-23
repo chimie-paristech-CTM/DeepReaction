@@ -9,6 +9,7 @@ from sklearn.utils import shuffle
 import pandas as pd
 from tqdm import tqdm
 import json
+import glob
 
 
 def read_xyz(file_path):
@@ -53,21 +54,53 @@ def symbols_to_atomic_numbers(symbols):
     return torch.tensor(atomic_nums, dtype=torch.long)
 
 
+def find_xyz_files(folder_path, prefix, keywords=['reactant', 'ts', 'product']):
+    found_files = {}
+    
+    xyz_files = glob.glob(osp.join(folder_path, f"{prefix}*.xyz"))
+    
+    for keyword in keywords:
+        for xyz_file in xyz_files:
+            basename = osp.basename(xyz_file).lower()
+            if keyword in basename:
+                found_files[keyword] = xyz_file
+                break
+    
+    missing = [k for k in keywords if k not in found_files]
+    if missing:
+        suffixes = {
+            'reactant': '_reactant.xyz',
+            'ts': '_ts.xyz', 
+            'product': '_product.xyz'
+        }
+        for keyword in missing:
+            if keyword in suffixes:
+                file_path = osp.join(folder_path, f"{prefix}{suffixes[keyword]}")
+                if osp.exists(file_path):
+                    found_files[keyword] = file_path
+    
+    return found_files
+
+
 class ReactionXYZDataset(InMemoryDataset):
-    SCHEMA_VERSION = "v2"
+    SCHEMA_VERSION = "v3"
 
     def __init__(self, root, csv_file='DA_dataset.csv', transform=None, pre_transform=None, pre_filter=None,
-                 target_fields=None, file_suffixes=None, input_features=None, force_reload=False, inference_mode=False):
+                 target_fields=None, file_keywords=None, input_features=None, force_reload=False, 
+                 inference_mode=False, id_field='ID', dir_field='R_dir', reaction_field='smiles'):
         if osp.isabs(csv_file) or csv_file.startswith('./') or csv_file.startswith('../'):
             self.csv_file = csv_file
         else:
             self.csv_file = osp.join(root, csv_file)
         self.target_fields = target_fields if isinstance(target_fields, list) else (
             [target_fields] if target_fields else None)
-        self.file_suffixes = file_suffixes or ['_reactant.xyz', '_ts.xyz', '_product.xyz']
+        self.file_keywords = file_keywords or ['reactant', 'ts', 'product']
         self.input_features = input_features or ['DG_act_xtb', 'DrG_xtb']
         self.force_reload = force_reload
         self.inference_mode = inference_mode
+        self.id_field = id_field
+        self.dir_field = dir_field
+        self.reaction_field = reaction_field
 
         if not isinstance(self.input_features, list):
             self.input_features = [self.input_features]
@@ -111,12 +144,16 @@ class ReactionXYZDataset(InMemoryDataset):
                 print(f"Target fields changed from {metadata.get('target_fields')} to {self.target_fields}")
                 return True
 
-            if metadata.get('file_suffixes') != self.file_suffixes:
-                print(f"File suffixes changed from {metadata.get('file_suffixes')} to {self.file_suffixes}")
+            if metadata.get('file_keywords') != self.file_keywords:
+                print(f"File keywords changed from {metadata.get('file_keywords')} to {self.file_keywords}")
                 return True
                 
             if metadata.get('inference_mode', False) != self.inference_mode:
                 print(f"Inference mode changed from {metadata.get('inference_mode', False)} to {self.inference_mode}")
+                return True
+                
+            if metadata.get('id_field') != self.id_field or metadata.get('dir_field') != self.dir_field or metadata.get('reaction_field') != self.reaction_field:
+                print(f"Field names changed")
                 return True
 
             try:
@@ -186,7 +223,9 @@ class ReactionXYZDataset(InMemoryDataset):
     def processed_file_names(self):
         features_str = '_'.join(sorted(self.input_features))
         targets_str = '_'.join(sorted(self.target_fields)) if self.target_fields else 'default'
-        combined_str = f"{features_str}_{targets_str}_{self.SCHEMA_VERSION}"
+        keywords_str = '_'.join(sorted(self.file_keywords))
+        fields_str = f"{self.id_field}_{self.dir_field}_{self.reaction_field}"
+        combined_str = f"{features_str}_{targets_str}_{keywords_str}_{fields_str}_{self.SCHEMA_VERSION}"
         if self.inference_mode:
             combined_str += "_inference"
         features_hash = hashlib.md5(combined_str.encode()).hexdigest()[:8]
@@ -200,7 +239,10 @@ class ReactionXYZDataset(InMemoryDataset):
             'schema_version': self.SCHEMA_VERSION,
             'input_features': self.input_features,
             'target_fields': self.target_fields,
-            'file_suffixes': self.file_suffixes,
+            'file_keywords': self.file_keywords,
+            'id_field': self.id_field,
+            'dir_field': self.dir_field,
+            'reaction_field': self.reaction_field,
             'inference_mode': self.inference_mode,
             'created_at': pd.Timestamp.now().isoformat()
         }
@@ -249,14 +291,14 @@ class ReactionXYZDataset(InMemoryDataset):
 
         print(f"Using target fields: {target_field_names}")
         print(f"Using input features: {self.input_features}")
-        reactant_suffix, ts_suffix, product_suffix = self.file_suffixes
-        print(f"Using file suffixes: reactant='{reactant_suffix}', ts='{ts_suffix}', product='{product_suffix}'")
+        print(f"Using file keywords: {self.file_keywords}")
+        print(f"Using field names: id='{self.id_field}', dir='{self.dir_field}', reaction='{self.reaction_field}'")
 
         data_list = []
         for row in tqdm(rows, desc="Processing reactions"):
-            reaction_id = row.get('ID', '').strip()
-            R_dir = row.get('R_dir', '').strip()
-            reaction_str = row.get('smiles', '').strip()
+            reaction_id = row.get(self.id_field, '').strip()
+            R_dir = row.get(self.dir_field, '').strip()
+            reaction_str = row.get(self.reaction_field, '').strip()
 
             if not reaction_id or not R_dir:
                 print(f"Warning: Missing required fields, skipping record: {row}")
@@ -312,46 +354,54 @@ class ReactionXYZDataset(InMemoryDataset):
             if prefix.startswith("reaction_"):
                 prefix = prefix[len("reaction_"):]
 
-            reactant_file = osp.join(folder_path, f"{prefix}{reactant_suffix}")
-            ts_file = osp.join(folder_path, f"{prefix}{ts_suffix}")
-            product_file = osp.join(folder_path, f"{prefix}{product_suffix}")
-
-            if not (osp.exists(reactant_file) and osp.exists(ts_file) and osp.exists(product_file)):
-                print(f"Warning: One or more xyz files are missing in {folder_path}, skipping reaction_id {reaction_id}")
+            found_files = find_xyz_files(folder_path, prefix, self.file_keywords)
+            
+            if len(found_files) != len(self.file_keywords):
+                missing = [k for k in self.file_keywords if k not in found_files]
+                print(f"Warning: Missing xyz files {missing} in {folder_path}, skipping reaction_id {reaction_id}")
                 continue
 
-            symbols0, pos0 = read_xyz(reactant_file)
-            symbols1, pos1 = read_xyz(ts_file)
-            symbols2, pos2 = read_xyz(product_file)
-
-            if None in (symbols0, pos0, symbols1, pos1, symbols2, pos2):
-                print(f"Warning: Failed to read XYZ files for {reaction_id}, skipping")
+            xyz_data = []
+            for keyword in self.file_keywords:
+                symbols, pos = read_xyz(found_files[keyword])
+                if symbols is None or pos is None:
+                    print(f"Warning: Failed to read {keyword} XYZ file for {reaction_id}, skipping")
+                    skip_record = True
+                    break
+                xyz_data.append((symbols, pos))
+            
+            if skip_record or len(xyz_data) != len(self.file_keywords):
                 continue
 
-            z0 = symbols_to_atomic_numbers(symbols0)
-            z1 = symbols_to_atomic_numbers(symbols1)
-            z2 = symbols_to_atomic_numbers(symbols2)
-
-            if None in (z0, z1, z2):
-                print(f"Warning: Failed to convert atomic symbols for {reaction_id}, skipping")
+            z_data = []
+            for symbols, _ in xyz_data:
+                z = symbols_to_atomic_numbers(symbols)
+                if z is None:
+                    print(f"Warning: Failed to convert atomic symbols for {reaction_id}, skipping")
+                    skip_record = True
+                    break
+                z_data.append(z)
+            
+            if skip_record:
                 continue
 
-            if len({pos0.size(0), pos1.size(0), pos2.size(0), z0.size(0), z1.size(0), z2.size(0)}) > 1:
+            atom_counts = [pos.size(0) for _, pos in xyz_data] + [z.size(0) for z in z_data]
+            if len(set(atom_counts)) > 1:
                 print(f"Warning: Inconsistent atom count in {reaction_id}, skipping")
                 continue
 
             y = torch.tensor([target_values], dtype=torch.float)
 
             data = Data(
-                z0=z0, z1=z1, z2=z2,
-                pos0=pos0, pos1=pos1, pos2=pos2,
+                z0=z_data[0], z1=z_data[1], z2=z_data[2],
+                pos0=xyz_data[0][1], pos1=xyz_data[1][1], pos2=xyz_data[2][1],
                 y=y,
                 xtb_features=torch.tensor([feature_values], dtype=torch.float),
                 feature_names=self.input_features,
                 reaction_id=reaction_id,
                 id=R_dir,
                 smiles=reaction_str,
-                num_nodes=z0.size(0)
+                num_nodes=z_data[0].size(0)
             )
 
             data_list.append(data)

@@ -42,6 +42,10 @@ class ReactionPredictor:
         
         if self.config.system.cuda and torch.cuda.is_available():
             device = torch.device(f"cuda:{self.config.system.gpu_id}")
+            device_name = torch.cuda.get_device_name(device)
+            if any(gpu in device_name for gpu in ['V100', 'A100', 'A10', 'A30', 'A40', 'RTX 30', 'RTX 40', '3080', '3090', '4080', '4090']):
+                torch.set_float32_matmul_precision(self.config.system.matmul_precision)
+                self.logger.info(f"Set float32 matmul precision to '{self.config.system.matmul_precision}' for better Tensor Core utilization")
             self.model = self.model.to(device)
         else:
             self.model = self.model.to('cpu')
@@ -119,10 +123,13 @@ class ReactionPredictor:
                 random_seed=self.config.training.random_seed,
                 root=self.config.dataset.dataset_root,
                 dataset_csv=csv_path,
-                file_suffixes=self.config.dataset.file_suffixes,
+                file_keywords=self.config.dataset.file_keywords,
                 input_features=self.config.dataset.input_features,
                 target_fields=None,
-                scaler=self.model.scaler
+                scaler=self.model.scaler,
+                id_field=self.config.dataset.id_field,
+                dir_field=self.config.dataset.dir_field,
+                reaction_field=self.config.dataset.reaction_field
             )
         except Exception as e:
             self.logger.error(f"Failed to load inference data: {e}")

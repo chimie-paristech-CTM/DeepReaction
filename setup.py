@@ -176,8 +176,8 @@ if __name__ == "__main__":
     setup(
         name="deepreaction",
         version=get_version(),
-        author="DeepReaction Team", 
-        author_email="example@example.com",
+        author="Bowen Deng",
+        author_email="a18608202465@gmail.com",
         description="Deep learning framework for chemical reaction property prediction",
         long_description=long_description,
         long_description_content_type="text/markdown",

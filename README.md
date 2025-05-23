@@ -70,15 +70,15 @@ DeepReaction requires a specific data format for training and prediction. The ke
 
 Your main dataset file should be a CSV with the following essential columns:
 
-| Column | Description |
-|--------|-------------|
-| `ID` | Unique identifier for each reaction |
-| `R_dir` | Directory name containing XYZ files (e.g., "reaction_R0") |
-| `reaction` | SMILES representation of the reaction |
-| `DG_act` |  Target property: Gibbs free activation energy (kcal/mol) |
-| `DrG` |  Target property: Gibbs free reaction energy (kcal/mol) |
+| Column       | Description |
+|--------------|-------------|
+| `ID`         | Unique identifier for each reaction |
+| `R_dir`      | Directory name containing XYZ files (e.g., "reaction_R0") |
+| `smiles`     | SMILES representation of the reaction |
+| `DG_act`     |  Target property: Gibbs free activation energy (kcal/mol) |
+| `DrG`        |  Target property: Gibbs free reaction energy (kcal/mol) |
 | `DG_act_xtb` |  Input feature: XTB-computed approximation of DG_act |
-| `DrG_xtb` | Input feature: XTB-computed approximation of DrG |
+| `DrG_xtb`    | Input feature: XTB-computed approximation of DrG |
 
 #### Example CSV row:
 ```

@@ -155,7 +155,8 @@ def check_reaction_id_overlap(train_data, val_data, test_data):
     
     return not has_overlap
 
-def load_dataset(root, csv_file, target_fields=None, file_suffixes=None, input_features=None, force_reload=False):
+def load_dataset(root, csv_file, target_fields=None, file_keywords=None, input_features=None, force_reload=False,
+                 id_field='ID', dir_field='R_dir', reaction_field='smiles'):
     force_reload = force_reload or (target_fields and len(target_fields) > 1)
     
     try:
@@ -163,9 +164,12 @@ def load_dataset(root, csv_file, target_fields=None, file_suffixes=None, input_f
             root=root, 
             csv_file=csv_file,
             target_fields=target_fields,
-            file_suffixes=file_suffixes,
+            file_keywords=file_keywords,
             input_features=input_features,
-            force_reload=force_reload
+            force_reload=force_reload,
+            id_field=id_field,
+            dir_field=dir_field,
+            reaction_field=reaction_field
         )
     except Exception as e:
         logger = logging.getLogger('deepreaction')
@@ -175,9 +179,12 @@ def load_dataset(root, csv_file, target_fields=None, file_suffixes=None, input_f
                 root=root, 
                 csv_file=csv_file,
                 target_fields=target_fields,
-                file_suffixes=file_suffixes,
+                file_keywords=file_keywords,
                 input_features=input_features,
-                force_reload=True
+                force_reload=True,
+                id_field=id_field,
+                dir_field=dir_field,
+                reaction_field=reaction_field
             )
         except Exception as reload_error:
             logger.error(f"Failed to reload dataset: {reload_error}")
@@ -244,7 +251,7 @@ def load_reaction(
     test_ratio=0.1,
     use_scaler=False,
     target_fields=None,
-    file_suffixes=None,
+    file_keywords=None,
     input_features=None,
     cv_folds=0,
     val_csv=None,
@@ -252,6 +259,9 @@ def load_reaction(
     cv_test_fold=-1,
     cv_stratify=False,
     cv_grouped=True,
+    id_field='ID',
+    dir_field='R_dir',
+    reaction_field='smiles'
 ):
     logger = logging.getLogger('deepreaction')
     torch.manual_seed(random_seed)
@@ -269,8 +279,11 @@ def load_reaction(
             root=root, 
             csv_file=dataset_csv,
             target_fields=target_fields,
-            file_suffixes=file_suffixes,
-            input_features=input_features
+            file_keywords=file_keywords,
+            input_features=input_features,
+            id_field=id_field,
+            dir_field=dir_field,
+            reaction_field=reaction_field
         )
         
         raise NotImplementedError("Cross-validation not implemented in this version")
@@ -283,24 +296,33 @@ def load_reaction(
                 root=root, 
                 csv_file=dataset_csv,
                 target_fields=target_fields,
-                file_suffixes=file_suffixes,
-                input_features=input_features
+                file_keywords=file_keywords,
+                input_features=input_features,
+                id_field=id_field,
+                dir_field=dir_field,
+                reaction_field=reaction_field
             )
             
             val_dataset = load_dataset(
                 root=root, 
                 csv_file=val_csv,
                 target_fields=target_fields,
-                file_suffixes=file_suffixes,
-                input_features=input_features
+                file_keywords=file_keywords,
+                input_features=input_features,
+                id_field=id_field,
+                dir_field=dir_field,
+                reaction_field=reaction_field
             )
             
             test_dataset = load_dataset(
                 root=root, 
                 csv_file=test_csv,
                 target_fields=target_fields,
-                file_suffixes=file_suffixes,
-                input_features=input_features
+                file_keywords=file_keywords,
+                input_features=input_features,
+                id_field=id_field,
+                dir_field=dir_field,
+                reaction_field=reaction_field
             )
         except Exception as e:
             logger.error(f"Failed to load separate datasets: {e}")
@@ -327,8 +349,11 @@ def load_reaction(
         root=root, 
         csv_file=dataset_csv,
         target_fields=target_fields,
-        file_suffixes=file_suffixes,
-        input_features=input_features
+        file_keywords=file_keywords,
+        input_features=input_features,
+        id_field=id_field,
+        dir_field=dir_field,
+        reaction_field=reaction_field
     )
     
     total_size = len(dataset)
@@ -350,11 +375,14 @@ def load_reaction_for_inference(
         random_seed,
         root,
         dataset_csv,
-        file_suffixes=None,
+        file_keywords=None,
         input_features=None,
         target_fields=None,
         scaler=None,
-        force_reload=False
+        force_reload=False,
+        id_field='ID',
+        dir_field='R_dir',
+        reaction_field='smiles'
 ):
     logger = logging.getLogger('deepreaction')
     torch.manual_seed(random_seed)
@@ -370,10 +398,13 @@ def load_reaction_for_inference(
         dataset = load_inference_dataset(
             root=root,
             csv_file=dataset_csv,
-            file_suffixes=file_suffixes,
+            file_keywords=file_keywords,
             input_features=input_features,
             target_fields=None,
-            force_reload=force_reload
+            force_reload=force_reload,
+            id_field=id_field,
+            dir_field=dir_field,
+            reaction_field=reaction_field
         )
     except Exception as e:
         logger.error(f"Failed to load inference dataset: {e}")
@@ -389,16 +420,20 @@ def load_reaction_for_inference(
     return data_list
 
 
-def load_inference_dataset(root, csv_file, file_suffixes=None, input_features=None, target_fields=None, force_reload=False):
+def load_inference_dataset(root, csv_file, file_keywords=None, input_features=None, target_fields=None, force_reload=False,
+                          id_field='ID', dir_field='R_dir', reaction_field='smiles'):
     try:
         dataset = ReactionXYZDataset(
             root=root,
             csv_file=csv_file,
             target_fields=None,
-            file_suffixes=file_suffixes,
+            file_keywords=file_keywords,
             input_features=input_features,
             force_reload=force_reload,
-            inference_mode=True
+            inference_mode=True,
+            id_field=id_field,
+            dir_field=dir_field,
+            reaction_field=reaction_field
         )
     except Exception as e:
         logger = logging.getLogger('deepreaction')
@@ -408,10 +443,13 @@ def load_inference_dataset(root, csv_file, file_suffixes=None, input_features=No
                 root=root,
                 csv_file=csv_file,
                 target_fields=None,
-                file_suffixes=file_suffixes,
+                file_keywords=file_keywords,
                 input_features=input_features,
                 force_reload=True,
-                inference_mode=True
+                inference_mode=True,
+                id_field=id_field,
+                dir_field=dir_field,
+                reaction_field=reaction_field
             )
         except Exception as reload_error:
             logger.error(f"Failed to reload inference dataset: {reload_error}")

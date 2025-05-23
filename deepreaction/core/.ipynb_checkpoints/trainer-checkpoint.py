@@ -31,6 +31,7 @@ class ReactionTrainer:
         self.config = config
         self.logger = self._setup_logging()
         self._setup_device()
+        self._setup_precision()
         self._validate_config()
     
     def _setup_logging(self):
@@ -53,6 +54,13 @@ class ReactionTrainer:
             self.device = torch.device("cpu")
             self.logger.info("Using CPU")
             self.config.system.cuda = False
+    
+    def _setup_precision(self):
+        if self.config.system.cuda and torch.cuda.is_available():
+            device_name = torch.cuda.get_device_name(self.device)
+            if any(gpu in device_name for gpu in ['V100', 'A100', 'A10', 'A30', 'A40', 'RTX 30', 'RTX 40', '3080', '3090', '4080', '4090']):
+                torch.set_float32_matmul_precision(self.config.system.matmul_precision)
+                self.logger.info(f"Set float32 matmul precision to '{self.config.system.matmul_precision}' for better Tensor Core utilization")
     
     def _validate_config(self):
         self.logger.info("Validating configuration...")
@@ -160,6 +168,26 @@ class ReactionTrainer:
         
         return Estimator(**model_config)
     
+    def _prepare_output_dir(self, output_dir):
+        os.makedirs(output_dir, exist_ok=True)
+        
+        checkpoint_dir = os.path.join(output_dir, 'checkpoints')
+        if os.path.exists(checkpoint_dir) and os.listdir(checkpoint_dir):
+            self.logger.warning(f"Checkpoint directory {checkpoint_dir} exists and is not empty")
+            existing_files = os.listdir(checkpoint_dir)
+            self.logger.info(f"Found {len(existing_files)} existing checkpoint files")
+            backup_dir = os.path.join(output_dir, f'checkpoints_backup_{int(time.time())}')
+            os.makedirs(backup_dir, exist_ok=True)
+            for file in existing_files:
+                if file.endswith('.ckpt'):
+                    os.rename(
+                        os.path.join(checkpoint_dir, file),
+                        os.path.join(backup_dir, file)
+                    )
+            self.logger.info(f"Moved existing checkpoints to {backup_dir}")
+        else:
+            os.makedirs(checkpoint_dir, exist_ok=True)
+    
     def _setup_callbacks(self, output_dir):
         callbacks = []
         
@@ -214,7 +242,6 @@ class ReactionTrainer:
         return callbacks
     
     def _setup_loggers(self, output_dir):
-        os.makedirs(output_dir, exist_ok=True)
         loggers = [
             TensorBoardLogger(
                 save_dir=output_dir,
@@ -235,7 +262,7 @@ class ReactionTrainer:
         self.logger.info(f"Set random seed to {self.config.training.random_seed}")
         
         output_dir = self.config.training.out_dir
-        os.makedirs(output_dir, exist_ok=True)
+        self._prepare_output_dir(output_dir)
         
         self.config.save(os.path.join(output_dir, 'config.json'))
         self.logger.info(f"Configuration saved to {output_dir}/config.json")

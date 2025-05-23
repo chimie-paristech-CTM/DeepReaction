@@ -5,8 +5,6 @@ from dataclasses import dataclass, asdict
 
 @dataclass
 class DatasetConfig:
-    dataset: str = 'XTB'
-    readout: str = 'mean'
     dataset_root: str = './dataset/DATASET_DA_F'
     dataset_csv: str = './dataset/DATASET_DA_F/dataset_xtb_final.csv'
     train_ratio: float = 0.8
@@ -15,8 +13,8 @@ class DatasetConfig:
     target_fields: List[str] = None
     target_weights: List[float] = None
     input_features: List[str] = None
-    file_patterns: List[str] = None
-    file_dir_pattern: str = 'reaction_*'
+    file_keywords: List[str] = None
+    readout: str = 'mean'
     id_field: str = 'ID'
     dir_field: str = 'R_dir'
     reaction_field: str = 'smiles'
@@ -28,7 +26,6 @@ class DatasetConfig:
     cv_stratify: bool = False
     cv_grouped: bool = True
     num_workers: int = 4
-    file_suffixes: List[str] = None
     
     def __post_init__(self):
         if self.target_fields is None:
@@ -37,10 +34,8 @@ class DatasetConfig:
             self.target_weights = [1.0] * len(self.target_fields)
         if self.input_features is None:
             self.input_features = ['DG_act_xtb', 'DrG_xtb']
-        if self.file_patterns is None:
-            self.file_patterns = ['*_reactant.xyz', '*_ts.xyz', '*_product.xyz']
-        if self.file_suffixes is None:
-            self.file_suffixes = ['_reactant.xyz', '_ts.xyz', '_product.xyz']
+        if self.file_keywords is None:
+            self.file_keywords = ['reactant', 'ts', 'product']
         if len(self.target_weights) != len(self.target_fields):
             self.target_weights = [1.0] * len(self.target_fields)
 
@@ -118,6 +113,7 @@ class SystemConfig:
     devices: int = 1
     log_level: str = 'info'
     log_to_file: bool = False
+    matmul_precision: str = 'high'
 
 
 class Config:
@@ -126,7 +122,6 @@ class Config:
         self.model = model
         self.training = training
         self.system = system
-        self.reaction = dataset
         self._validate_config()
     
     def _validate_config(self):

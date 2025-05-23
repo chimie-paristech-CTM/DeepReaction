@@ -46,14 +46,17 @@ class ReactionDataset:
                 test_ratio=self.config.dataset.test_ratio,
                 use_scaler=self.config.dataset.use_scaler,
                 target_fields=self.config.dataset.target_fields,
-                file_suffixes=['_reactant.xyz', '_ts.xyz', '_product.xyz'],
+                file_keywords=self.config.dataset.file_keywords,
                 input_features=self.config.dataset.input_features,
                 cv_folds=self.config.dataset.cv_folds,
                 val_csv=self.config.dataset.val_csv,
                 test_csv=self.config.dataset.test_csv,
                 cv_test_fold=self.config.dataset.cv_test_fold,
                 cv_stratify=self.config.dataset.cv_stratify,
-                cv_grouped=self.config.dataset.cv_grouped
+                cv_grouped=self.config.dataset.cv_grouped,
+                id_field=self.config.dataset.id_field,
+                dir_field=self.config.dataset.dir_field,
+                reaction_field=self.config.dataset.reaction_field
             )
             
             if self.config.dataset.cv_folds > 0:
