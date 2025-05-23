@@ -1,4 +1,6 @@
-from deepreaction.core.trainer import ReactionTrainer
-from deepreaction.core.predictor import ReactionPredictor
+from .config import Config
+from .dataset import ReactionDataset
+from .trainer import ReactionTrainer
+from .predictor import ReactionPredictor
 
-__all__ = ["ReactionTrainer", "ReactionPredictor"]
+__all__ = ['Config', 'ReactionDataset', 'ReactionTrainer', 'ReactionPredictor']

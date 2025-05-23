@@ -1,8 +1,6 @@
-from .base import BaseReactionModel
-from .factory import ModelRegistry, ModelFactory, create_model
-from .dimenetplusplus import DimeNetPlusPlus
+from .model_factory import ModelFactory
 from .model import MoleculePredictionModel
 from .readout import ReadoutFactory
+from .dimenetplusplus import DimeNetPlusPlus
 
-
-__all__ = ['create_model', 'DimeNetPlusPlus', 'MoleculePredictionModel']
+__all__ = ['ModelFactory', 'MoleculePredictionModel', 'ReadoutFactory', 'DimeNetPlusPlus']

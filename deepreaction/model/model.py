@@ -3,101 +3,82 @@ import torch.nn as nn
 from torch_geometric.utils import to_dense_batch
 from typing import List, Union, Optional, Dict, Any
 
-from .factory import ModelFactory
+from .model_factory import ModelFactory
 from .readout import ReadoutFactory
 
-class EnhancedPredictionMLP(nn.Module):
+
+class PredictionMLP(nn.Module):
     def __init__(
         self,
         input_dim: int,
         output_dim: int = 1,
-        hidden_dim: int = 128,
-        num_hidden_layers: int = 3,
-        dropout: float = 0.0,
-        use_layer_norm: bool = False
+        pred_hidden_dim: int = 128,
+        pred_num_hidden_layers: int = 3,
+        pred_dropout: float = 0.0,
+        pred_use_layer_norm: bool = False
     ):
         super().__init__()
         
-        self.num_hidden_layers = num_hidden_layers
-        self.hidden_dim = hidden_dim
+        self.pred_num_hidden_layers = pred_num_hidden_layers
+        self.pred_hidden_dim = pred_hidden_dim
         
-        self.layers = nn.ModuleList()
-        self.layers.append(nn.Linear(input_dim, hidden_dim))
+        self.pred_layers = nn.ModuleList()
+        self.pred_layers.append(nn.Linear(input_dim, pred_hidden_dim))
         
-        for _ in range(1, num_hidden_layers):
-            self.layers.append(nn.Linear(hidden_dim, hidden_dim))
+        for _ in range(1, pred_num_hidden_layers):
+            self.pred_layers.append(nn.Linear(pred_hidden_dim, pred_hidden_dim))
         
-        self.fc_out = nn.Linear(hidden_dim, output_dim)
-        self.activation = nn.ReLU()
-        self.dropout = nn.Dropout(dropout) if dropout > 0 else nn.Identity()
+        self.pred_fc_out = nn.Linear(pred_hidden_dim, output_dim)
+        self.pred_activation = nn.ReLU()
+        self.pred_dropout = nn.Dropout(pred_dropout) if pred_dropout > 0 else nn.Identity()
         
-        self.layer_norms = nn.ModuleList()
-        for _ in range(num_hidden_layers):
-            self.layer_norms.append(nn.LayerNorm(hidden_dim) if use_layer_norm else nn.Identity())
+        self.pred_layer_norms = nn.ModuleList()
+        for _ in range(pred_num_hidden_layers):
+            self.pred_layer_norms.append(nn.LayerNorm(pred_hidden_dim) if pred_use_layer_norm else nn.Identity())
     
     def forward(self, x):
-        for i in range(self.num_hidden_layers):
-            x = self.layers[i](x)
-            x = self.activation(x)
-            x = self.dropout(x)
-            x = self.layer_norms[i](x)
+        for i in range(self.pred_num_hidden_layers):
+            x = self.pred_layers[i](x)
+            x = self.pred_activation(x)
+            x = self.pred_dropout(x)
+            x = self.pred_layer_norms[i](x)
         
-        return self.fc_out(x)
+        return self.pred_fc_out(x)
+
 
 class MultiTargetPredictionHead(nn.Module):
     def __init__(
         self,
         input_dim: int,
-        num_targets: int = 1,
-        hidden_dim: int = 128,
-        num_hidden_layers: int = 3,
-        dropout: float = 0.0,
-        use_layer_norm: bool = False,
-        additional_features_dim: int = 2,
-        use_xtb_features: bool = True
+        pred_num_targets: int = 1,
+        pred_hidden_dim: int = 128,
+        pred_num_hidden_layers: int = 3,
+        pred_dropout: float = 0.0,
+        pred_use_layer_norm: bool = False,
+        pred_additional_features_dim: int = 2,
+        pred_use_xtb_features: bool = True
     ):
         super().__init__()
         
-        self.num_targets = num_targets
-        self.use_xtb_features = use_xtb_features
+        self.pred_num_targets = pred_num_targets
+        self.pred_use_xtb_features = pred_use_xtb_features
         
-        # 调试信息
-        print(f"DEBUG - MultiTargetPredictionHead initialized with {num_targets} targets")
-        print(f"DEBUG - MultiTargetPredictionHead input_dim: {input_dim}")
-        
-        # 创建多个预测头，每个目标一个
-        self.prediction_heads = nn.ModuleList()
-        for i in range(num_targets):
-            print(f"DEBUG - Creating head for target {i}")
-            head = EnhancedPredictionMLP(
+        self.pred_heads = nn.ModuleList()
+        for _ in range(pred_num_targets):
+            head = PredictionMLP(
                 input_dim=input_dim,
-                output_dim=1,  # 每个头只预测一个值
-                hidden_dim=hidden_dim,
-                num_hidden_layers=num_hidden_layers,
-                dropout=dropout,
-                use_layer_norm=use_layer_norm
+                output_dim=1,
+                pred_hidden_dim=pred_hidden_dim,
+                pred_num_hidden_layers=pred_num_hidden_layers,
+                pred_dropout=pred_dropout,
+                pred_use_layer_norm=pred_use_layer_norm
             )
-            self.prediction_heads.append(head)
+            self.pred_heads.append(head)
     
     def forward(self, x):
-        # 从每个头获取预测
-        predictions = []
-        for i, head in enumerate(self.prediction_heads):
-            pred = head(x)
-            predictions.append(pred)
-        
-        # 在维度1上连接预测结果
-        if len(predictions) > 1:
-            result = torch.cat(predictions, dim=1)
-        else:
-            result = predictions[0]
-            
-        # 调试输出形状
-        if not hasattr(self, 'debug_printed'):
-            print(f"DEBUG - MultiTargetPredictionHead output shape: {result.shape}")
-            self.debug_printed = True
-            
-        return result
+        predictions = [head(x) for head in self.pred_heads]
+        return torch.cat(predictions, dim=1)
+
 
 class MoleculePredictionModel(nn.Module):
     def __init__(
@@ -107,14 +88,14 @@ class MoleculePredictionModel(nn.Module):
         max_num_atoms: int = 100,
         node_dim: int = 128,
         output_dim: int = 1,
-        dropout: float = 0.0,
-        use_layer_norm: bool = False,
+        pred_dropout: float = 0.0,
+        pred_use_layer_norm: bool = False,
         readout_kwargs: Optional[Dict[str, Any]] = None,
         model_kwargs: Optional[Dict[str, Any]] = None,
-        use_xtb_features: bool = False,
-        prediction_hidden_layers: int = 3,
-        prediction_hidden_dim: int = 128,
-        num_xtb_features: int = 0
+        pred_use_xtb_features: bool = True,
+        pred_hidden_layers: int = 3,
+        pred_hidden_dim: int = 128,
+        pred_num_xtb_features: int = 2
     ):
         super().__init__()
 
@@ -123,10 +104,10 @@ class MoleculePredictionModel(nn.Module):
         self.max_num_atoms = max_num_atoms
         self.node_dim = node_dim
         self.output_dim = output_dim
-        self.use_xtb_features = use_xtb_features
-        self.prediction_hidden_layers = prediction_hidden_layers
-        self.prediction_hidden_dim = prediction_hidden_dim
-        self.num_xtb_features = num_xtb_features
+        self.pred_use_xtb_features = pred_use_xtb_features
+        self.pred_hidden_layers = pred_hidden_layers
+        self.pred_hidden_dim = pred_hidden_dim
+        self.pred_num_xtb_features = pred_num_xtb_features
 
         if readout_kwargs is None:
             readout_kwargs = {}
@@ -142,41 +123,49 @@ class MoleculePredictionModel(nn.Module):
 
         readout_params = {
             'node_dim': node_dim,
-            'hidden_dim': readout_kwargs.get('hidden_dim', 128),
-            'num_heads': readout_kwargs.get('num_heads', 4),
-            'layer_norm': use_layer_norm,
-            'num_sabs': readout_kwargs.get('num_sabs', 2)
+            'readout_hidden_dim': readout_kwargs.get('readout_hidden_dim', 128),
+            'readout_num_heads': readout_kwargs.get('readout_num_heads', 4),
+            'readout_layer_norm': pred_use_layer_norm,
+            'readout_num_sabs': readout_kwargs.get('readout_num_sabs', 2)
         }
         self.readout = ReadoutFactory.create_readout(readout_type, **readout_params)
         
-        input_dim_for_mlp = node_dim + (num_xtb_features if use_xtb_features else 0)
+        self.graph_combination = nn.Linear(node_dim * 3, node_dim)
+        
+        input_dim_for_mlp = node_dim + (pred_num_xtb_features if pred_use_xtb_features else 0)
         
         self.prediction_mlp = MultiTargetPredictionHead(
             input_dim=input_dim_for_mlp,
-            num_targets=output_dim,
-            hidden_dim=prediction_hidden_dim,
-            num_hidden_layers=prediction_hidden_layers,
-            dropout=dropout,
-            use_layer_norm=use_layer_norm,
-            additional_features_dim=num_xtb_features,
-            use_xtb_features=use_xtb_features
+            pred_num_targets=output_dim,
+            pred_hidden_dim=pred_hidden_dim,
+            pred_num_hidden_layers=pred_hidden_layers,
+            pred_dropout=pred_dropout,
+            pred_use_layer_norm=pred_use_layer_norm,
+            pred_additional_features_dim=pred_num_xtb_features,
+            pred_use_xtb_features=pred_use_xtb_features
         )
 
     def forward(self, pos0, pos1, pos2, z0, z1, z2, batch_mapping, xtb_features=None):
-        _, graph_embeddings = self.base_model(
+        (x0, x1, x2), (P0, P1, P2) = self.base_model(
             z0=z0, z1=z1, z2=z2, 
             pos0=pos0, pos1=pos1, pos2=pos2, 
             batch=batch_mapping
         )
         
-        dummy_nodes = torch.zeros((z0.size(0), self.node_dim), device=z0.device)
-        node_embeddings_dense, mask = to_dense_batch(
-            dummy_nodes, batch_mapping, 0, self.max_num_atoms
-        )
+        P0_dense, mask0 = to_dense_batch(P0, batch_mapping, 0, self.max_num_atoms)
+        P1_dense, mask1 = to_dense_batch(P1, batch_mapping, 0, self.max_num_atoms)
+        P2_dense, mask2 = to_dense_batch(P2, batch_mapping, 0, self.max_num_atoms)
+        
+        graph_emb0 = self.readout(P0_dense, mask0)
+        graph_emb1 = self.readout(P1_dense, mask1)
+        graph_emb2 = self.readout(P2_dense, mask2)
+        
+        combined_graph_emb = torch.cat([graph_emb0, graph_emb1, graph_emb2], dim=1)
+        graph_embeddings = self.graph_combination(combined_graph_emb)
 
-        if self.use_xtb_features and xtb_features is not None and xtb_features.size(1) > 0:
-            if self.num_xtb_features is not None and xtb_features.shape[1] > self.num_xtb_features:
-                features_to_use = xtb_features[:, :self.num_xtb_features]
+        if self.pred_use_xtb_features and xtb_features is not None:
+            if self.pred_num_xtb_features is not None and xtb_features.shape[1] > self.pred_num_xtb_features:
+                features_to_use = xtb_features[:, :self.pred_num_xtb_features]
             else:
                 features_to_use = xtb_features
             
@@ -186,4 +175,4 @@ class MoleculePredictionModel(nn.Module):
 
         predictions = self.prediction_mlp(combined_features)
         
-        return node_embeddings_dense, graph_embeddings, predictions
+        return P0_dense, graph_embeddings, predictions

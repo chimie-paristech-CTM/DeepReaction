@@ -1,7 +1,7 @@
 import os
 import os.path as osp
 from math import pi as PI, sqrt
-from typing import Callable, Union,Dict,Any
+from typing import Callable, Union
 
 import numpy as np
 import torch
@@ -17,6 +17,7 @@ from torch_geometric.nn.inits import glorot_orthogonal
 from torch_geometric.nn.resolver import activation_resolver
 
 import sympy as sym
+
 
 def bessel_basis(num_spherical, num_radial):
     x = sym.symbols('x')
@@ -278,8 +279,6 @@ class DimeNetPlusPlus(nn.Module):
             for _ in range(num_blocks)
         ])
 
-        self.output_combination = Linear(out_channels * 3, out_channels)
-
         self.reset_parameters()
 
     def reset_parameters(self):
@@ -289,8 +288,6 @@ class DimeNetPlusPlus(nn.Module):
             out_block.reset_parameters()
         for interaction in self.interaction_blocks:
             interaction.reset_parameters()
-        glorot_orthogonal(self.output_combination.weight, scale=2.0)
-        self.output_combination.bias.data.fill_(0)
 
     def triplets(self, edge_index, num_nodes):
         row, col = edge_index
@@ -311,86 +308,27 @@ class DimeNetPlusPlus(nn.Module):
     def _forward_single(self, z, pos, batch=None):
         edge_index = radius_graph(pos, r=self.cutoff, batch=batch,
                                   max_num_neighbors=self.max_num_neighbors)
-
-        num_nodes = z.size(0)
-        row, col = edge_index
-
-        node_mask = torch.ones(num_nodes, dtype=torch.bool, device=z.device)
-        node_mask[row] = False
-        node_mask[col] = False
-
-        isolated_nodes = torch.nonzero(node_mask).squeeze(1)
-        if isolated_nodes.numel() > 0:
-            self_loop_index = torch.stack([isolated_nodes, isolated_nodes], dim=0)
-            edge_index = torch.cat([edge_index, self_loop_index], dim=1)
-
-        i, j, idx_i, idx_j, idx_k, idx_kj, idx_ji = self.triplets(edge_index, num_nodes=num_nodes)
-
+        i, j, idx_i, idx_j, idx_k, idx_kj, idx_ji = self.triplets(edge_index, num_nodes=z.size(0))
         dist = (pos[i] - pos[j]).pow(2).sum(dim=-1).sqrt()
-
-        self_loop_mask = (i == j)
-        dist[self_loop_mask] = 1e-5
-
         pos_i = pos[idx_i]
         pos_ji = pos[idx_j] - pos_i
         pos_ki = pos[idx_k] - pos_i
-
+        
         a = (pos_ji * pos_ki).sum(dim=-1)
         b = torch.linalg.cross(pos_ji, pos_ki).norm(dim=-1)
         angle = torch.atan2(b, a)
-
-        self_triplet_mask = (idx_i == idx_j) | (idx_i == idx_k) | (idx_j == idx_k)
-        angle[self_triplet_mask] = 0.0
-
         rbf = self.rbf(dist)
         sbf = self.sbf(dist, angle, idx_kj)
         x = self.emb(z, rbf, i, j)
-
-        P = self.output_blocks[0](x, rbf, i, num_nodes=num_nodes)
-
+        P = self.output_blocks[0](x, rbf, i, num_nodes=pos.size(0))
         for interaction_block, output_block in zip(self.interaction_blocks, self.output_blocks[1:]):
             x = interaction_block(x, rbf, sbf, idx_kj, idx_ji)
-            out = output_block(x, rbf, i, num_nodes=num_nodes)
-            P = P + out
-
+            P += output_block(x, rbf, i)
         return x, P
 
     def forward(self, z0, z1, z2, pos0, pos1, pos2, batch=None):
-        _, P0 = self._forward_single(z0, pos0, batch)
-        _, P1 = self._forward_single(z1, pos1, batch)
-        _, P2 = self._forward_single(z2, pos2, batch) 
-
-        if batch is not None:
-            from torch_scatter import scatter
-
-            num_graphs = batch.max().item() + 1
-
-            if P0.size(0) != num_graphs:
-                P0 = scatter(P0, batch, dim=0, dim_size=num_graphs, reduce='mean')
-            if P1.size(0) != num_graphs:
-                P1 = scatter(P1, batch, dim=0, dim_size=num_graphs, reduce='mean')
-            if P2.size(0) != num_graphs:
-                P2 = scatter(P2, batch, dim=0, dim_size=num_graphs, reduce='mean')
-
-        P_concat = torch.cat([P0, P1, P2], dim=1)
-        P = self.output_combination(P_concat)
-        return None, P
-
-    @classmethod
-    def get_default_params(cls) -> Dict[str, Any]:
-        return {
-            'hidden_channels': 128,
-            'out_channels': 128,
-            'num_blocks': 4,
-            'int_emb_size': 64,
-            'basis_emb_size': 8,
-            'out_emb_channels': 256,
-            'num_spherical': 7,
-            'num_radial': 6,
-            'cutoff': 5.0,
-            'max_num_neighbors': 32,
-            'envelope_exponent': 5,
-            'num_before_skip': 1,
-            'num_after_skip': 2,
-            'num_output_layers': 3,
-        }
+        x0, P0 = self._forward_single(z0, pos0, batch)
+        x1, P1 = self._forward_single(z1, pos1, batch)
+        x2, P2 = self._forward_single(z2, pos2, batch)
+        
+        return (x0, x1, x2), (P0, P1, P2)
