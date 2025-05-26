@@ -154,7 +154,7 @@ This dataset contains:
 Place your reaction dataset in the appropriate location:
 
 ```
-./Dataset
+./dataset
 ```
 
 Alternatively, modify the paths in the configuration file or command-line arguments.
