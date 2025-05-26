@@ -60,6 +60,7 @@ pip install jupyterlab
 
 > ⚠️ **Note:** The version of **PyTorch Geometric (PyG)** and its related packages must be selected according to your hardware configuration (e.g., CUDA version).
 > Visit the official [PyG installation guide](https://pytorch-geometric.readthedocs.io/en/latest/notes/installation.html) to find the correct command for your system.
+> 
 > ⚠️ **Note:** Due to the computational complexity of graph neural network architectures built with PyG (PyTorch Geometric), it is recommended to run them on a GPU for better performance and efficiency.
 
 ## 📊 Data Format
