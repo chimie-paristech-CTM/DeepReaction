@@ -12,8 +12,8 @@ def main():
     # Simplified parameters - removed redundant ones
     params = {
         # Dataset parameters
-        'dataset_root': './dataset/DATASET_DA_F',
-        'dataset_csv': './dataset/DATASET_DA_F/dataset_xtb_final.csv',
+        'dataset_root': '../dataset/DATASET_DA_F',
+        'dataset_csv': '../dataset/DATASET_DA_F/dataset_xtb_final.csv',
         'train_ratio': 0.8,
         'val_ratio': 0.1,
         'test_ratio': 0.1,
@@ -31,7 +31,7 @@ def main():
         'model_type': 'dimenet++',
         'node_dim': 128,
         'dropout': 0.1,
-        'prediction_hidden_layers': 3,
+        'prediction_hidden_layers': 4,
         'prediction_hidden_dim': 512,
         'use_layer_norm': False,
         'use_xtb_features': True,
@@ -61,7 +61,7 @@ def main():
         'batch_size': 16,
         'eval_batch_size': 32,
         'lr': 0.0005,
-        'max_epochs': 4,
+        'max_epochs': 100,
         'early_stopping_patience': 40,
         'early_stopping_min_delta': 0.0001,
         'optimizer': 'adamw',

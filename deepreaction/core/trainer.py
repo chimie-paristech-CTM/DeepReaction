@@ -4,7 +4,7 @@ import json
 import torch
 import numpy as np
 import logging
-from typing import List, Dict, Any, Optional, Tuple
+from typing import Dict, Any, List, Optional, Tuple
 from torch_geometric.loader import DataLoader as GeometricDataLoader
 
 import pytorch_lightning as pl
@@ -15,6 +15,12 @@ from pytorch_lightning.loggers import TensorBoardLogger, CSVLogger
 
 from .config import Config
 from ..module.pl_wrap import Estimator
+
+
+def seed_worker(worker_id):
+    worker_seed = torch.initial_seed() % 2 ** 32
+    np.random.seed(worker_seed)
+    torch.manual_seed(worker_seed)
 
 
 class NumpyEncoder(json.JSONEncoder):
@@ -82,11 +88,6 @@ class ReactionTrainer:
         self.logger.info("Configuration validation completed")
 
     def _create_dataloader(self, dataset, batch_size, eval_mode=False):
-        def seed_worker(worker_id):
-            worker_seed = torch.initial_seed() % 2 ** 32
-            np.random.seed(worker_seed)
-            torch.manual_seed(worker_seed)
-
         num_workers = self.config.system.num_workers if not eval_mode else min(self.config.system.num_workers, 2)
 
         loader_kwargs = {
@@ -97,6 +98,9 @@ class ReactionTrainer:
             'follow_batch': ['z0', 'z1', 'z2', 'pos0', 'pos1', 'pos2'],
             'pin_memory': self.config.system.cuda,
         }
+
+        if num_workers > 0:
+            loader_kwargs['persistent_workers'] = True
 
         self.logger.info(
             f"Creating dataloader: batch_size={batch_size}, num_workers={num_workers}, eval_mode={eval_mode}")
@@ -264,7 +268,7 @@ class ReactionTrainer:
         return loggers
 
     def fit(self, train_dataset, val_dataset, test_dataset=None, scalers=None, checkpoint_path=None, mode='train') -> \
-    Dict[str, Any]:
+            Dict[str, Any]:
         pl.seed_everything(self.config.training.random_seed)
         self.logger.info(f"Set random seed to {self.config.training.random_seed}")
 
