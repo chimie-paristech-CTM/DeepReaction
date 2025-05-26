@@ -166,8 +166,7 @@ To train the model with the dataset using our specialized training script:
 
 ```
 # Basic training with default parameters
-cp ./example/train.py .
-python train.py
+python ./example/train.py
 ```
 
 ### Available command line options
@@ -186,8 +185,7 @@ python train.py
 To evaluate a trained model:
 
 ```
-cp ./example/predict.py .
-python predict.py
+python ./example/predict.py
 ```
 
 The prediction notebook allows you to:
@@ -202,8 +200,7 @@ The prediction notebook allows you to:
 
 ```bash
 # Run hyperparameter optimization
-cp ./example/hyper.py .
-python hyper.py
+python ./example/hyper.py
 ```
 
 ## 📝 Citation

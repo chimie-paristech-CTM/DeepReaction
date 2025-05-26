@@ -6,10 +6,7 @@
   <component name="ChangeListManager">
     <list default="true" id="94731d45-201e-4dbc-a4e7-9a36e7716e22" name="更改" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/deepreaction/core/trainer.py" beforeDir="false" afterPath="$PROJECT_DIR$/deepreaction/core/trainer.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/example/hyper.py" beforeDir="false" afterPath="$PROJECT_DIR$/example/hyper.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/example/predict.py" beforeDir="false" afterPath="$PROJECT_DIR$/example/predict.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/example/train.py" beforeDir="false" afterPath="$PROJECT_DIR$/example/train.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -140,7 +137,7 @@
       <workItem from="1748155000578" duration="790000" />
       <workItem from="1748177428809" duration="5000" />
       <workItem from="1748177517420" duration="1248000" />
-      <workItem from="1748189885083" duration="3037000" />
+      <workItem from="1748189885083" duration="3720000" />
     </task>
     <servers />
   </component>
