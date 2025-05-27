@@ -12,8 +12,8 @@ def main():
     # Simplified parameters - removed redundant ones
     params = {
         # Dataset parameters
-        'dataset_root': '../dataset/DATASET_DA_F',
-        'dataset_csv': '../dataset/DATASET_DA_F/dataset_xtb_final.csv',
+        'dataset_root': 'dataset/DATASET_DA_F',
+        'dataset_csv': 'dataset_xtb_final.csv',
         'train_ratio': 0.8,
         'val_ratio': 0.1,
         'test_ratio': 0.1,
