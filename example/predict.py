@@ -9,9 +9,9 @@ from deepreaction import Config, ReactionPredictor
 
 
 def main():
-    # Simplified parameters - only the essential ones for prediction
+
     params = {
-        # Dataset parameters
+
         'dataset_root': 'dataset/DATASET_DA_F',
         'input_features': ['DG_act_xtb', 'DrG_xtb'],
         'file_keywords': ['reactant', 'ts', 'product'],

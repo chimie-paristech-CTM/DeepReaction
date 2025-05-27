@@ -9,7 +9,6 @@ from deepreaction import Config, ReactionDataset, ReactionTrainer
 
 
 def main():
-    # Simplified parameters - removed redundant ones
     params = {
         # Dataset parameters
         'dataset_root': 'dataset/DATASET_DA_F',
