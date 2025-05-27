@@ -7,6 +7,7 @@
     <list default="true" id="94731d45-201e-4dbc-a4e7-9a36e7716e22" name="更改" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/example/predict.py" beforeDir="false" afterPath="$PROJECT_DIR$/example/predict.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -137,7 +138,12 @@
       <workItem from="1748155000578" duration="790000" />
       <workItem from="1748177428809" duration="5000" />
       <workItem from="1748177517420" duration="1248000" />
-      <workItem from="1748189885083" duration="3720000" />
+      <workItem from="1748189885083" duration="5949000" />
+      <workItem from="1748248652489" duration="5000" />
+      <workItem from="1748248951376" duration="5972000" />
+      <workItem from="1748269468091" duration="1192000" />
+      <workItem from="1748336259975" duration="133000" />
+      <workItem from="1748336860441" duration="628000" />
     </task>
     <servers />
   </component>

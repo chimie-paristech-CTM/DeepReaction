@@ -60,6 +60,7 @@ pip install jupyterlab
 
 > ⚠️ **Note:** The version of **PyTorch Geometric (PyG)** and its related packages must be selected according to your hardware configuration (e.g., CUDA version).
 > Visit the official [PyG installation guide](https://pytorch-geometric.readthedocs.io/en/latest/notes/installation.html) to find the correct command for your system.
+> 
 > ⚠️ **Note:** Due to the computational complexity of graph neural network architectures built with PyG (PyTorch Geometric), it is recommended to run them on a GPU for better performance and efficiency.
 
 ## 📊 Data Format
@@ -120,7 +121,7 @@ dataset_root/
 
 When setting up your configuration, make sure to specify:
 
-- `file_patterns`: Patterns to identify XYZ files (default: `['*_reactant.xyz', '*_ts.xyz', '*_product.xyz']`)
+- `file_keywords`: Patterns to identify XYZ files (default: `['*_reactant.xyz', '*_ts.xyz', '*_product.xyz']`)
 - `target_fields`:  Target properties to predict (default: `['DG_act', 'DrG']`)
 - `input_features`:  Features used as input (default: `['DG_act_xtb', 'DrG_xtb']`)
 - `id_field`: Column name for reaction IDs (default: `'ID'`)
@@ -136,7 +137,7 @@ The models in DeepReaction were developed and tested using a comprehensive Diels
 **Dataset link:** [Diels-Alder Reaction Space for Self-Healing Polymer](https://figshare.com/articles/dataset/Diels-Alder_reaction_space_for_self-healing_polymer/29118509?file=54702098)
 
 This dataset contains:
-- 1,580+ Diels-Alder reactions with complete 3D structures
+- 1,580 Diels-Alder reactions with complete 3D structures
 - Quantum chemical calculations (DFT and XTB) for transition states and energetics
 - Reaction energies, activation energies, and structural information
 -  Computed properties including DG_act and DrG values
@@ -153,7 +154,7 @@ This dataset contains:
 Place your reaction dataset in the appropriate location:
 
 ```
-./Dataset
+./dataset
 ```
 
 Alternatively, modify the paths in the configuration file or command-line arguments.
@@ -166,7 +167,7 @@ To train the model with the dataset using our specialized training script:
 
 ```
 # Basic training with default parameters
-python ./example/train.py
+python example/train.py
 ```
 
 ### Available command line options
@@ -182,10 +183,10 @@ python ./example/train.py
 
 ## 📈 Evaluation
 
-To evaluate a trained model:
+To evaluate a trained model([Checkpoint link](https://figshare.com/articles/dataset/Diels-Alder_reaction_space_for_self-healing_polymer/29118509?file=54702098)):
 
 ```
-python ./example/predict.py
+python example/predict.py
 ```
 
 The prediction notebook allows you to:
@@ -200,7 +201,7 @@ The prediction notebook allows you to:
 
 ```bash
 # Run hyperparameter optimization
-python ./example/hyper.py
+python example/hyper.py
 ```
 
 ## 📝 Citation
