@@ -121,7 +121,7 @@ dataset_root/
 
 When setting up your configuration, make sure to specify:
 
-- `file_patterns`: Patterns to identify XYZ files (default: `['*_reactant.xyz', '*_ts.xyz', '*_product.xyz']`)
+- `file_keywords`: Patterns to identify XYZ files (default: `['*_reactant.xyz', '*_ts.xyz', '*_product.xyz']`)
 - `target_fields`:  Target properties to predict (default: `['DG_act', 'DrG']`)
 - `input_features`:  Features used as input (default: `['DG_act_xtb', 'DrG_xtb']`)
 - `id_field`: Column name for reaction IDs (default: `'ID'`)
@@ -137,7 +137,7 @@ The models in DeepReaction were developed and tested using a comprehensive Diels
 **Dataset link:** [Diels-Alder Reaction Space for Self-Healing Polymer](https://figshare.com/articles/dataset/Diels-Alder_reaction_space_for_self-healing_polymer/29118509?file=54702098)
 
 This dataset contains:
-- 1,580+ Diels-Alder reactions with complete 3D structures
+- 1,580 Diels-Alder reactions with complete 3D structures
 - Quantum chemical calculations (DFT and XTB) for transition states and energetics
 - Reaction energies, activation energies, and structural information
 -  Computed properties including DG_act and DrG values
@@ -183,7 +183,7 @@ python example/train.py
 
 ## 📈 Evaluation
 
-To evaluate a trained model:
+To evaluate a trained model([Checkpoint link](https://figshare.com/articles/dataset/Diels-Alder_reaction_space_for_self-healing_polymer/29118509?file=54702098)):
 
 ```
 python example/predict.py
