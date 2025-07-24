@@ -60,7 +60,7 @@ class ModelConfig:
     num_after_skip: int = 2
     num_output_layers: int = 3
     max_num_neighbors: int = 32
-    use_xtb_features: bool = True
+    use_xtb_features: bool = False
     max_num_atoms: int = 100
     readout_hidden_dim: int = 128
     readout_num_heads: int = 4

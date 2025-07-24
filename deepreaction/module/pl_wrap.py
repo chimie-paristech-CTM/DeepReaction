@@ -68,7 +68,7 @@ class Estimator(pl.LightningModule):
         self.name = name
         self.num_targets = len(self.scaler) if isinstance(self.scaler, list) else 1
         self.use_xtb_features = use_xtb_features
-        self.num_xtb_features = num_xtb_features
+        self.num_xtb_features = num_xtb_features if use_xtb_features else 0
         self.prediction_hidden_layers = prediction_hidden_layers
         self.prediction_hidden_dim = prediction_hidden_dim
 
@@ -198,6 +198,9 @@ class Estimator(pl.LightningModule):
         return {'optimizer': optimizer, 'lr_scheduler': scheduler_config, 'monitor': self.monitor_loss}
 
     def _batch_loss(self, pos0, pos1, pos2, y, z0, z1, z2, batch_mapping, xtb_features=None):
+        if not self.use_xtb_features:
+            xtb_features = None
+
         _, graph_embeddings, predictions = self.forward(
             pos0, pos1, pos2, z0, z1, z2, batch_mapping, xtb_features
         )
@@ -224,7 +227,7 @@ class Estimator(pl.LightningModule):
     def _step(self, batch, step_type: str):
         pos0, pos1, pos2, y = batch.pos0, batch.pos1, batch.pos2, batch.y
         z0, z1, z2, batch_mapping = batch.z0, batch.z1, batch.z2, batch.batch
-        xtb_features = getattr(batch, 'xtb_features', None)
+        xtb_features = getattr(batch, 'xtb_features', None) if self.use_xtb_features else None
 
         total_loss, _, predictions = self._batch_loss(
             pos0, pos1, pos2, y, z0, z1, z2, batch_mapping, xtb_features

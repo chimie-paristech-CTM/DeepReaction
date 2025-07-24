@@ -56,7 +56,8 @@ class ReactionDataset:
                 cv_grouped=self.config.dataset.cv_grouped,
                 id_field=self.config.dataset.id_field,
                 dir_field=self.config.dataset.dir_field,
-                reaction_field=self.config.dataset.reaction_field
+                reaction_field=self.config.dataset.reaction_field,
+                use_xtb_features=self.config.model.use_xtb_features
             )
 
             if self.config.dataset.cv_folds > 0:
@@ -89,4 +90,6 @@ class ReactionDataset:
         return len(self.config.dataset.target_fields)
 
     def get_num_features(self) -> int:
-        return len(self.config.dataset.input_features)
+        if self.config.model.use_xtb_features:
+            return len(self.config.dataset.input_features)
+        return 0

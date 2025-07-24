@@ -12,7 +12,7 @@ import random
 from .PygReaction import ReactionXYZDataset
 
 
-def train_scaler(ds_list):
+def train_scaler(ds_list, use_xtb_features=True):
     if not ds_list:
         return None
 
@@ -50,7 +50,7 @@ def train_scaler(ds_list):
     return scalers
 
 
-def scale_reaction_dataset(ds_list, scalers):
+def scale_reaction_dataset(ds_list, scalers, use_xtb_features=True):
     if not ds_list:
         return []
 
@@ -95,7 +95,7 @@ def scale_reaction_dataset(ds_list, scalers):
                 num_nodes=data.num_nodes
             )
 
-            if hasattr(data, 'xtb_features'):
+            if use_xtb_features and hasattr(data, 'xtb_features'):
                 xtb_features_value = data.xtb_features.numpy()
                 xtb_features_scaled = np.zeros_like(xtb_features_value)
 
@@ -160,7 +160,7 @@ def check_reaction_id_overlap(train_data, val_data, test_data):
 
 
 def load_dataset(root, csv_file, target_fields=None, file_keywords=None, input_features=None, force_reload=False,
-                 id_field='ID', dir_field='R_dir', reaction_field='smiles'):
+                 id_field='ID', dir_field='R_dir', reaction_field='smiles', use_xtb_features=True):
     force_reload = force_reload or (target_fields and len(target_fields) > 1)
 
     try:
@@ -173,7 +173,8 @@ def load_dataset(root, csv_file, target_fields=None, file_keywords=None, input_f
             force_reload=force_reload,
             id_field=id_field,
             dir_field=dir_field,
-            reaction_field=reaction_field
+            reaction_field=reaction_field,
+            use_xtb_features=use_xtb_features
         )
     except Exception as e:
         logger = logging.getLogger('deepreaction')
@@ -188,7 +189,8 @@ def load_dataset(root, csv_file, target_fields=None, file_keywords=None, input_f
                 force_reload=True,
                 id_field=id_field,
                 dir_field=dir_field,
-                reaction_field=reaction_field
+                reaction_field=reaction_field,
+                use_xtb_features=use_xtb_features
             )
         except Exception as reload_error:
             logger.error(f"Failed to reload dataset: {reload_error}")
@@ -228,7 +230,7 @@ def create_data_split(dataset, indices, ensure_2d=True):
     return data_list
 
 
-def prepare_data_splits(dataset, train_indices, val_indices, test_indices, use_scaler=False):
+def prepare_data_splits(dataset, train_indices, val_indices, test_indices, use_scaler=False, use_xtb_features=True):
     train_data = create_data_split(dataset, train_indices)
     val_data = create_data_split(dataset, val_indices)
     test_data = create_data_split(dataset, test_indices)
@@ -239,14 +241,14 @@ def prepare_data_splits(dataset, train_indices, val_indices, test_indices, use_s
     logger = logging.getLogger('deepreaction')
     logger.info(f"Data splits: train={len(train_data)}, val={len(val_data)}, test={len(test_data)}")
 
-    scalers = train_scaler(train_data) if use_scaler else None
+    scalers = train_scaler(train_data, use_xtb_features) if use_scaler else None
 
     if scalers:
         logger.info(f"Trained {len(scalers)} scalers")
 
-    train_scaled = scale_reaction_dataset(train_data, scalers)
-    val_scaled = scale_reaction_dataset(val_data, scalers)
-    test_scaled = scale_reaction_dataset(test_data, scalers)
+    train_scaled = scale_reaction_dataset(train_data, scalers, use_xtb_features)
+    val_scaled = scale_reaction_dataset(val_data, scalers, use_xtb_features)
+    test_scaled = scale_reaction_dataset(test_data, scalers, use_xtb_features)
 
     return train_scaled, val_scaled, test_scaled, scalers
 
@@ -270,7 +272,8 @@ def load_reaction(
         cv_grouped=True,
         id_field='ID',
         dir_field='R_dir',
-        reaction_field='smiles'
+        reaction_field='smiles',
+        use_xtb_features=True
 ):
     logger = logging.getLogger('deepreaction')
     torch.manual_seed(random_seed)
@@ -292,7 +295,8 @@ def load_reaction(
             input_features=input_features,
             id_field=id_field,
             dir_field=dir_field,
-            reaction_field=reaction_field
+            reaction_field=reaction_field,
+            use_xtb_features=use_xtb_features
         )
 
         raise NotImplementedError("Cross-validation not implemented in this version")
@@ -309,7 +313,8 @@ def load_reaction(
                 input_features=input_features,
                 id_field=id_field,
                 dir_field=dir_field,
-                reaction_field=reaction_field
+                reaction_field=reaction_field,
+                use_xtb_features=use_xtb_features
             )
 
             val_dataset = load_dataset(
@@ -320,7 +325,8 @@ def load_reaction(
                 input_features=input_features,
                 id_field=id_field,
                 dir_field=dir_field,
-                reaction_field=reaction_field
+                reaction_field=reaction_field,
+                use_xtb_features=use_xtb_features
             )
 
             test_dataset = load_dataset(
@@ -331,7 +337,8 @@ def load_reaction(
                 input_features=input_features,
                 id_field=id_field,
                 dir_field=dir_field,
-                reaction_field=reaction_field
+                reaction_field=reaction_field,
+                use_xtb_features=use_xtb_features
             )
         except Exception as e:
             logger.error(f"Failed to load separate datasets: {e}")
@@ -346,11 +353,11 @@ def load_reaction(
 
         check_reaction_id_overlap(train_data, val_data, test_data)
 
-        scalers = train_scaler(train_data) if use_scaler else None
+        scalers = train_scaler(train_data, use_xtb_features) if use_scaler else None
 
-        train_scaled = scale_reaction_dataset(train_data, scalers)
-        val_scaled = scale_reaction_dataset(val_data, scalers)
-        test_scaled = scale_reaction_dataset(test_data, scalers)
+        train_scaled = scale_reaction_dataset(train_data, scalers, use_xtb_features)
+        val_scaled = scale_reaction_dataset(val_data, scalers, use_xtb_features)
+        test_scaled = scale_reaction_dataset(test_data, scalers, use_xtb_features)
 
         return train_scaled, val_scaled, test_scaled, scalers
 
@@ -363,7 +370,8 @@ def load_reaction(
         input_features=input_features,
         id_field=id_field,
         dir_field=dir_field,
-        reaction_field=reaction_field
+        reaction_field=reaction_field,
+        use_xtb_features=use_xtb_features
     )
 
     total_size = len(dataset)
@@ -377,7 +385,8 @@ def load_reaction(
         train_indices=splits['train'],
         val_indices=splits['valid'],
         test_indices=splits['test'],
-        use_scaler=use_scaler
+        use_scaler=use_scaler,
+        use_xtb_features=use_xtb_features
     )
 
 
@@ -392,7 +401,8 @@ def load_reaction_for_inference(
         force_reload=False,
         id_field='ID',
         dir_field='R_dir',
-        reaction_field='smiles'
+        reaction_field='smiles',
+        use_xtb_features=True
 ):
     logger = logging.getLogger('deepreaction')
     torch.manual_seed(random_seed)
@@ -414,7 +424,8 @@ def load_reaction_for_inference(
             force_reload=force_reload,
             id_field=id_field,
             dir_field=dir_field,
-            reaction_field=reaction_field
+            reaction_field=reaction_field,
+            use_xtb_features=use_xtb_features
         )
     except Exception as e:
         logger.error(f"Failed to load inference dataset: {e}")
@@ -423,7 +434,7 @@ def load_reaction_for_inference(
     data_list = create_data_split(dataset, range(len(dataset)))
 
     if scaler is not None:
-        data_list = scale_inference_dataset(data_list, scaler)
+        data_list = scale_inference_dataset(data_list, scaler, use_xtb_features)
 
     logger.info(f"Loaded {len(data_list)} samples for inference")
 
@@ -432,7 +443,7 @@ def load_reaction_for_inference(
 
 def load_inference_dataset(root, csv_file, file_keywords=None, input_features=None, target_fields=None,
                            force_reload=False,
-                           id_field='ID', dir_field='R_dir', reaction_field='smiles'):
+                           id_field='ID', dir_field='R_dir', reaction_field='smiles', use_xtb_features=True):
     try:
         dataset = ReactionXYZDataset(
             root=root,
@@ -444,7 +455,8 @@ def load_inference_dataset(root, csv_file, file_keywords=None, input_features=No
             inference_mode=True,
             id_field=id_field,
             dir_field=dir_field,
-            reaction_field=reaction_field
+            reaction_field=reaction_field,
+            use_xtb_features=use_xtb_features
         )
     except Exception as e:
         logger = logging.getLogger('deepreaction')
@@ -460,7 +472,8 @@ def load_inference_dataset(root, csv_file, file_keywords=None, input_features=No
                 inference_mode=True,
                 id_field=id_field,
                 dir_field=dir_field,
-                reaction_field=reaction_field
+                reaction_field=reaction_field,
+                use_xtb_features=use_xtb_features
             )
         except Exception as reload_error:
             logger.error(f"Failed to reload inference dataset: {reload_error}")
@@ -469,7 +482,7 @@ def load_inference_dataset(root, csv_file, file_keywords=None, input_features=No
     return dataset
 
 
-def scale_inference_dataset(ds_list, scalers):
+def scale_inference_dataset(ds_list, scalers, use_xtb_features=True):
     if not ds_list or not scalers:
         return ds_list
 
@@ -487,7 +500,7 @@ def scale_inference_dataset(ds_list, scalers):
                 num_nodes=data.num_nodes
             )
 
-            if hasattr(data, 'xtb_features'):
+            if use_xtb_features and hasattr(data, 'xtb_features'):
                 xtb_features_value = data.xtb_features.numpy()
                 xtb_features_scaled = np.zeros_like(xtb_features_value)
 

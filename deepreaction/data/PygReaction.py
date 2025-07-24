@@ -83,11 +83,12 @@ def find_xyz_files(folder_path, prefix, keywords=['reactant', 'ts', 'product']):
 
 
 class ReactionXYZDataset(InMemoryDataset):
-    SCHEMA_VERSION = "v3"
+    SCHEMA_VERSION = "v4"
 
     def __init__(self, root, csv_file='DA_dataset.csv', transform=None, pre_transform=None, pre_filter=None,
                  target_fields=None, file_keywords=None, input_features=None, force_reload=False,
-                 inference_mode=False, id_field='ID', dir_field='R_dir', reaction_field='smiles'):
+                 inference_mode=False, id_field='ID', dir_field='R_dir', reaction_field='smiles',
+                 use_xtb_features=True):
         if osp.isabs(csv_file) or csv_file.startswith('./') or csv_file.startswith('../'):
             self.csv_file = csv_file
         else:
@@ -101,6 +102,7 @@ class ReactionXYZDataset(InMemoryDataset):
         self.id_field = id_field
         self.dir_field = dir_field
         self.reaction_field = reaction_field
+        self.use_xtb_features = use_xtb_features
 
         if not isinstance(self.input_features, list):
             self.input_features = [self.input_features]
@@ -150,6 +152,10 @@ class ReactionXYZDataset(InMemoryDataset):
 
             if metadata.get('inference_mode', False) != self.inference_mode:
                 print(f"Inference mode changed from {metadata.get('inference_mode', False)} to {self.inference_mode}")
+                return True
+
+            if metadata.get('use_xtb_features', True) != self.use_xtb_features:
+                print(f"use_xtb_features changed from {metadata.get('use_xtb_features', True)} to {self.use_xtb_features}")
                 return True
 
             if metadata.get('id_field') != self.id_field or metadata.get('dir_field') != self.dir_field or metadata.get(
@@ -222,7 +228,7 @@ class ReactionXYZDataset(InMemoryDataset):
 
     @property
     def processed_file_names(self):
-        features_str = '_'.join(sorted(self.input_features))
+        features_str = '_'.join(sorted(self.input_features)) if self.use_xtb_features else 'no_xtb'
         targets_str = '_'.join(sorted(self.target_fields)) if self.target_fields else 'default'
         keywords_str = '_'.join(sorted(self.file_keywords))
         fields_str = f"{self.id_field}_{self.dir_field}_{self.reaction_field}"
@@ -245,6 +251,7 @@ class ReactionXYZDataset(InMemoryDataset):
             'dir_field': self.dir_field,
             'reaction_field': self.reaction_field,
             'inference_mode': self.inference_mode,
+            'use_xtb_features': self.use_xtb_features,
             'created_at': pd.Timestamp.now().isoformat()
         }
 
@@ -291,7 +298,7 @@ class ReactionXYZDataset(InMemoryDataset):
             print("Inference mode: Using dummy target field")
 
         print(f"Using target fields: {target_field_names}")
-        print(f"Using input features: {self.input_features}")
+        print(f"Using input features: {self.input_features if self.use_xtb_features else 'None'}")
         print(f"Using file keywords: {self.file_keywords}")
         print(f"Using field names: id='{self.id_field}', dir='{self.dir_field}', reaction='{self.reaction_field}'")
 
@@ -334,22 +341,23 @@ class ReactionXYZDataset(InMemoryDataset):
                 target_values = [0.0] * len(target_field_names)
 
             feature_values = []
-            for feature_name in self.input_features:
-                feature_str = row.get(feature_name, '').strip()
-                if not feature_str:
-                    print(f"Warning: Missing feature {feature_name}, skipping record: {reaction_id}")
-                    skip_record = True
-                    break
+            if self.use_xtb_features:
+                for feature_name in self.input_features:
+                    feature_str = row.get(feature_name, '').strip()
+                    if not feature_str:
+                        print(f"Warning: Missing feature {feature_name}, skipping record: {reaction_id}")
+                        skip_record = True
+                        break
 
-                try:
-                    feature_values.append(float(feature_str))
-                except ValueError:
-                    print(f"Error parsing feature {feature_name} in reaction_id {reaction_id}")
-                    skip_record = True
-                    break
+                    try:
+                        feature_values.append(float(feature_str))
+                    except ValueError:
+                        print(f"Error parsing feature {feature_name} in reaction_id {reaction_id}")
+                        skip_record = True
+                        break
 
-            if skip_record:
-                continue
+                if skip_record:
+                    continue
 
             prefix = R_dir
             if prefix.startswith("reaction_"):
@@ -397,13 +405,15 @@ class ReactionXYZDataset(InMemoryDataset):
                 z0=z_data[0], z1=z_data[1], z2=z_data[2],
                 pos0=xyz_data[0][1], pos1=xyz_data[1][1], pos2=xyz_data[2][1],
                 y=y,
-                xtb_features=torch.tensor([feature_values], dtype=torch.float),
-                feature_names=self.input_features,
                 reaction_id=reaction_id,
                 id=R_dir,
                 smiles=reaction_str,
                 num_nodes=z_data[0].size(0)
             )
+
+            if self.use_xtb_features and feature_values:
+                data.xtb_features = torch.tensor([feature_values], dtype=torch.float)
+                data.feature_names = self.input_features
 
             data_list.append(data)
 
@@ -411,9 +421,10 @@ class ReactionXYZDataset(InMemoryDataset):
             raise RuntimeError("No reaction data processed, please check the CSV and xyz file formats.")
 
         data, slices = self.collate(data_list)
-        data.input_features = self.input_features
+        data.input_features = self.input_features if self.use_xtb_features else None
         data.target_fields = target_field_names
         data.inference_mode = self.inference_mode
+        data.use_xtb_features = self.use_xtb_features
 
         try:
             torch.save((data, slices), self.processed_paths[0])

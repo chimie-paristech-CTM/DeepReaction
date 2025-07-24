@@ -131,7 +131,8 @@ class ReactionPredictor:
                 scaler=self.model.scaler,
                 id_field=self.config.dataset.id_field,
                 dir_field=self.config.dataset.dir_field,
-                reaction_field=self.config.dataset.reaction_field
+                reaction_field=self.config.dataset.reaction_field,
+                use_xtb_features=self.config.model.use_xtb_features
             )
         except Exception as e:
             self.logger.error(f"Failed to load inference data: {e}")
@@ -166,8 +167,8 @@ class ReactionPredictor:
                     z0, z1, z2, batch_mapping = batch.z0, batch.z1, batch.z2, batch.batch
                     xtb_features = getattr(batch, 'xtb_features', None)
 
-                    if xtb_features is None:
-                        self.logger.warning(f"Batch {batch_idx}: No XTB features found")
+                    if self.config.model.use_xtb_features and xtb_features is None:
+                        self.logger.warning(f"Batch {batch_idx}: No XTB features found but use_xtb_features is True")
 
                     _, _, predictions = self.model(pos0, pos1, pos2, z0, z1, z2, batch_mapping, xtb_features)
 
@@ -211,18 +212,26 @@ class ReactionPredictor:
         elif hasattr(self.config.dataset, 'target_fields') and self.config.dataset.target_fields:
             model_target_fields = self.config.dataset.target_fields
 
-        feature_to_scaler_map = self._map_features_to_scaler_indices(
-            self.config.dataset.input_features, model_target_fields
-        )
+        if self.config.model.use_xtb_features:
+            feature_to_scaler_map = self._map_features_to_scaler_indices(
+                self.config.dataset.input_features, model_target_fields
+            )
+            output_field_names = self._get_output_field_names(self.config.dataset.input_features)
+        else:
+            feature_to_scaler_map = {i: i for i in range(predictions.shape[1])}
+            output_field_names = model_target_fields if model_target_fields else [f"Target_{i}" for i in range(predictions.shape[1])]
 
-        output_field_names = self._get_output_field_names(self.config.dataset.input_features)
         self.logger.info(f"Output field names: {output_field_names}")
 
         results = {}
         for i, output_field in enumerate(output_field_names):
             target_preds = predictions[:, i].reshape(-1, 1)
 
-            scaler_idx = feature_to_scaler_map.get(i, i)
+            if self.config.model.use_xtb_features:
+                scaler_idx = feature_to_scaler_map.get(i, i)
+            else:
+                scaler_idx = i
+
             if (hasattr(self.model, 'scaler') and self.model.scaler is not None
                     and isinstance(self.model.scaler, list) and scaler_idx < len(self.model.scaler)
                     and self.model.scaler[scaler_idx] is not None):
