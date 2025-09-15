@@ -34,6 +34,11 @@ This repository corresponds to the DeepReaction project, designed for accurate p
 git clone https://github.com/chimie-paristech-CTM/DeepReaction.git
 cd DeepReaction
 
+# Create and activate virtual environment
+python3 -m venv reaction
+source reaction/bin/activate  # On Linux/Mac
+# reaction\Scripts\activate    # On Windows
+
 # Install in development mode
 pip install -e .
 
