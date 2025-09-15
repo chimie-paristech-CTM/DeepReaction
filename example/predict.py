@@ -32,7 +32,7 @@ def main():
         'log_level': 'info'
     }
 
-    checkpoint_path = "./results/reaction_model/checkpoints/best-epoch=0002-val_total_loss=0.1134.ckpt"
+    checkpoint_path = "./results/reaction_model/checkpoints/best-epoch=0056-val_total_loss=0.0505.ckpt"
 
     inference_csv = "./dataset/DATASET_DA_F/dataset_xtb_final.csv"
 
