@@ -57,7 +57,8 @@ conda activate reaction
 # (Optional) For Jupyter notebook support
 pip install jupyterlab
 ```
-
+> ⚠️ **Note:** This package requires Python ≥ 3.10.
+> 
 > ⚠️ **Note:** The version of **PyTorch Geometric (PyG)** and its related packages must be selected according to your hardware configuration (e.g., CUDA version).
 > Visit the official [PyG installation guide](https://pytorch-geometric.readthedocs.io/en/latest/notes/installation.html) to find the correct command for your system.
 > 
